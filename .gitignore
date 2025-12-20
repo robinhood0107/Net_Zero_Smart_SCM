@@ -1,0 +1,89 @@
+# ===== 빌드 결과물 =====
+/target/
+*.jar
+*.class
+
+# ===== Maven =====
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# ===== 로그 =====
+/logs/
+*.log
+*.log.*
+*.lck
+
+# ===== DB 설정 (보안) =====
+config.properties
+*.properties
+!pom.xml
+
+# ===== 개인 메모/설정 =====
+DB 초기 설정.txt
+*.txt
+!README.txt
+
+# ===== IDE =====
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ===== OS =====
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.Trash-*
+
+# ===== 보안 관련 =====
+*.env
+.env.*
+*.secret
+*.key
+*.pem
+*.p12
+*.jks
+secrets/
+credentials/
+
+# ===== 임시 파일 =====
+*.tmp
+*.temp
+*.swp
+*.bak
+*.orig
+mvn
