@@ -41,8 +41,8 @@ psql -U parkjongjin -d scm_db -f seed.sql
 
 ```properties
 db.url=jdbc:postgresql://localhost:5432/scm_db
-db.user=parkjongjin
-db.password=park1234!
+db.user=내 이름
+db.password=내 비밀번호
 ```
 
 > ⚠️ 본인의 DB 비밀번호로 수정하세요!
