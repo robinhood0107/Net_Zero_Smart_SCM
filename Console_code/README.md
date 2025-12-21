@@ -25,16 +25,6 @@ CREATE DATABASE scm_db OWNER parkjongjin;
 
 ### 2단계: 스키마 및 샘플 데이터 적용
 
-```powershell
-cd C:\Users\pjjpj\Desktop\hw10
-
-# 스키마 생성
-psql -U parkjongjin -d scm_db -f schema.sql
-
-# 샘플 데이터 적용
-psql -U parkjongjin -d scm_db -f seed.sql
-```
-
 ### 3단계: DB 접속 설정
 
 프로젝트 루트에 `config.properties` 파일 생성:
@@ -50,8 +40,6 @@ db.password=내 비밀번호
 ### 4단계: 빌드 및 실행
 
 ```powershell
-cd C:\Users\pjjpj\Desktop\hw10
-
 # 방법 1: Maven으로 바로 실행 (추천)
 mvn exec:java
 
