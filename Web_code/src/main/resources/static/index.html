@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>ShipBuild SCM - 메인</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230f766e'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='Arial'%3ESC%3C/text%3E%3C/svg%3E"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS (빌드된 파일) -->
+    <link href="css/tailwind.css" rel="stylesheet"/>
+    <!-- Custom Styles -->
+    <link href="css/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background dark:bg-background-dark text-text-main dark:text-white font-sans overflow-hidden antialiased selection:bg-primary dark:selection:bg-primary-dark selection:text-white">
+    <div class="flex h-screen w-full relative">
+    <!-- 모바일 메뉴 토글 체크박스 -->
+    <input class="hidden peer" id="nav-toggle" type="checkbox"/>
+    <label class="peer-checked:block hidden fixed inset-0 bg-black/50 z-40 md:hidden" for="nav-toggle"></label>
+    
+    <!-- 좌측 사이드바 메뉴 -->
+    <aside class="slide-menu fixed md:static inset-y-0 left-0 z-50 w-72 flex-shrink-0 border-r border-border dark:border-border-dark bg-surface dark:bg-[#111618] flex flex-col justify-between p-4 shadow-xl md:shadow-none transition-transform duration-300">
+        <div class="flex flex-col gap-8">
+                <div class="flex items-center justify-between gap-3 px-2">
+                    <a href="index.html" class="flex flex-col px-4 py-3 rounded-lg border border-border dark:border-border-dark hover:bg-gray-50 dark:hover:bg-[#283539] transition-all cursor-pointer">
+                        <h1 class="text-text-main dark:text-white text-lg font-bold leading-tight tracking-tight">Smart SCM</h1>
+                        <p class="text-text-sub dark:text-text-secondary text-xs font-medium">탄소 중립 시스템</p>
+                    </a>
+                    <label class="md:hidden text-text-sub dark:text-text-secondary cursor-pointer hover:text-primary dark:hover:text-white transition-colors" for="nav-toggle">
+                        <span class="material-symbols-outlined">close</span>
+                    </label>
+                </div>
+            
+            <nav class="flex flex-col gap-2">
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-light dark:bg-primary-cyan/10 text-primary dark:text-primary-cyan font-bold shadow-sm ring-1 ring-primary/10 dark:ring-0 border-l-4 border-primary dark:border-primary-cyan transition-all" href="index.html">
+                    <span class="material-symbols-outlined" data-weight="fill">home</span>
+                    <span>HOME</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="dashboard.html">
+                    <span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+                    <span class="font-medium">프로젝트 대시보드</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="order.html">
+                    <span class="material-symbols-outlined group-hover:scale-110 transition-transform">package_2</span>
+                    <span class="font-medium">주문/납품 관리</span>
+                </a>
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="supplier.html">
+                    <span class="material-symbols-outlined group-hover:scale-110 transition-transform">description</span>
+                    <span class="font-medium">공급망 리포트</span>
+                </a>
+            </nav>
+        </div>
+        
+        <div class="flex flex-col gap-2">
+            <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group" href="setting.html">
+                <span class="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
+                <span class="font-medium">설정</span>
+            </a>
+            <div class="mt-4 pt-4 border-t border-border dark:border-border-dark flex items-center justify-between gap-3 px-2">
+                <div class="flex items-center gap-3 flex-1">
+                        <div class="h-10 w-10 rounded-full bg-primary/20 dark:bg-primary-cyan/20 ring-2 ring-border dark:ring-border-dark flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-lg">person</span>
+                        </div>
+                    <div class="flex flex-col">
+                        <p class="text-sm font-semibold text-text-main dark:text-white">Admin</p>
+                        <p class="text-xs text-text-sub dark:text-text-secondary">관리자</p>
+                    </div>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="테마 전환">
+                    <span class="material-symbols-outlined theme-toggle-icon">dark_mode</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- 메인 콘텐츠 영역 -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative w-full bg-background dark:bg-background-dark">
+        <!-- 모바일 헤더 -->
+        <div class="md:hidden flex items-center justify-between p-4 border-b border-border dark:border-border-dark bg-surface dark:bg-[#111618]">
+                <a href="index.html" class="font-bold text-text-main dark:text-white px-3 py-2 rounded-lg border border-border dark:border-border-dark hover:bg-gray-50 dark:hover:bg-[#283539] transition-all">
+                    Smart SCM
+                </a>
+            <label class="text-text-main dark:text-white p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors" for="nav-toggle">
+                <span class="material-symbols-outlined">menu</span>
+            </label>
+        </div>
+        
+        <!-- 콘텐츠 표시 영역 -->
+        <div class="flex-1 overflow-y-auto p-4 md:p-8 lg:px-12 scroll-smooth">
+            <div class="max-w-7xl mx-auto w-full flex flex-col gap-8 pb-12">
+            <nav aria-label="Breadcrumb" class="flex items-center text-sm font-medium text-text-sub dark:text-text-secondary mb-2">
+                <ol class="flex items-center gap-2">
+                    <li class="flex items-center gap-2 hover:text-primary dark:hover:text-white transition-colors">
+                        <a class="flex items-center" href="index.html">
+                            <span class="material-symbols-outlined text-[20px]">home</span>
+                            <span class="ml-1">HOME</span>
+                        </a>
+                    </li>
+                </ol>
+            </nav>
+            <!-- 환영 메시지 -->
+            <div class="flex flex-wrap justify-between items-end gap-6 animate-fade-in">
+                <div class="flex flex-col gap-2">
+                    <h2 class="text-text-main dark:text-white text-3xl font-bold tracking-tight">스마트 SCM 앱에 오신 것을 환영합니다</h2>
+                    <p class="text-text-sub dark:text-text-secondary text-base">효율적인 탄소 중립 관리를 시작하세요.</p>
+                </div>
+            <!-- 주요 현황 요약 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- 활성 프로젝트 수 -->
+                <a href="dashboard.html" class="bg-surface dark:bg-surface-dark rounded-xl p-5 border border-border dark:border-border-dark flex flex-col gap-4 shadow-sm dark:shadow-none hover:shadow-md dark:hover:border-primary-cyan/50 transition-all cursor-pointer">
+                    <div class="flex justify-between items-start">
+                        <div class="p-2 bg-sky-50 dark:bg-[#1f2b30] rounded-lg">
+                            <span class="material-symbols-outlined text-sky-600 dark:text-primary-cyan">folder_open</span>
+                        </div>
+                        <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-400/10 px-2 py-1 rounded">실시간</span>
+                    </div>
+                    <div>
+                        <p class="text-text-sub dark:text-text-secondary text-sm font-medium">활성 프로젝트</p>
+                        <p class="text-text-main dark:text-white text-2xl font-bold mt-1" id="active-projects-count">-</p>
+                    </div>
+                </a>
+                
+                <!-- 납품 지연 건수 -->
+                <a href="order.html" class="bg-surface dark:bg-surface-dark rounded-xl p-5 border border-border dark:border-border-dark flex flex-col gap-4 shadow-sm dark:shadow-none hover:shadow-md dark:hover:border-primary-cyan/50 transition-all cursor-pointer">
+                    <div class="flex justify-between items-start">
+                        <div class="p-2 bg-orange-50 dark:bg-[#1f2b30] rounded-lg">
+                            <span class="material-symbols-outlined text-orange-500 dark:text-orange-400">local_shipping</span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-text-sub dark:text-text-secondary text-sm font-medium">납품 지연</p>
+                        <p class="text-text-main dark:text-white text-2xl font-bold mt-1" id="delayed-deliveries-count">-</p>
+                    </div>
+                </a>
+                
+                <!-- ESG 등급 평균 -->
+                <a href="supplier.html" class="bg-surface dark:bg-surface-dark rounded-xl p-5 border border-border dark:border-border-dark flex flex-col gap-4 shadow-sm dark:shadow-none hover:shadow-md dark:hover:border-primary-cyan/50 transition-all cursor-pointer">
+                    <div class="flex justify-between items-start">
+                        <div class="p-2 bg-indigo-50 dark:bg-[#1f2b30] rounded-lg">
+                            <span class="material-symbols-outlined text-indigo-500 dark:text-primary-cyan">verified_user</span>
+                        </div>
+                        <span class="text-xs font-bold text-text-sub dark:text-text-secondary bg-slate-100 dark:bg-[#283539] px-2 py-1 rounded">평균</span>
+                    </div>
+                    <div>
+                        <p class="text-text-sub dark:text-text-secondary text-sm font-medium">공급업체 ESG 등급</p>
+                        <p class="text-text-main dark:text-white text-2xl font-bold mt-1" id="avg-esg-grade">-</p>
+                    </div>
+                </a>
+            </div>
+            
+            <!-- 최근 프로젝트 목록 테이블 -->
+            <div class="bg-surface dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-6 flex flex-col shadow-sm dark:shadow-none">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-text-main dark:text-white text-lg font-bold dark:font-semibold">최근 프로젝트 목록</h3>
+                    <a class="text-primary dark:text-primary-cyan text-xs font-bold hover:underline" href="dashboard.html">모두 보기</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-text-sub dark:text-text-secondary uppercase bg-gray-50 dark:bg-[#1f2b30]">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 rounded-l-lg">프로젝트명</th>
+                                <th scope="col" class="px-6 py-3">선종</th>
+                                <th scope="col" class="px-6 py-3">계약일</th>
+                                <th scope="col" class="px-6 py-3">상태</th>
+                                <th scope="col" class="px-6 py-3 rounded-r-lg text-right">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="project-list-body">
+                            <!-- JS로 동적 로딩됨 -->
+                            <tr>
+                                <td colspan="5" class="px-6 py-4 text-center text-text-sub dark:text-text-secondary">
+                                    데이터를 불러오는 중...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- 페이지네이션 컨트롤 -->
+                <div class="flex justify-end gap-2 mt-4">
+                    <button id="prev-page-btn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-[#1f2b30] text-text-sub dark:text-text-secondary hover:bg-gray-200 dark:hover:bg-[#283539] disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+                        <span class="material-symbols-outlined text-sm align-middle">chevron_left</span> 이전
+                    </button>
+                    <span id="page-indicator" class="px-3 py-1.5 text-xs font-medium text-text-sub dark:text-text-secondary self-center">1 페이지</span>
+                    <button id="next-page-btn" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-[#1f2b30] text-text-sub dark:text-text-secondary hover:bg-gray-200 dark:hover:bg-[#283539] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        다음 <span class="material-symbols-outlined text-sm align-middle">chevron_right</span>
+                    </button>
+                </div>
+            </div>
+            </div>
+        </div>
+    </main>
+    </div>
+    
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/index.js"></script>
+</body>
+</html>

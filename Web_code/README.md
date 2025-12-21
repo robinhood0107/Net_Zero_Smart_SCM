@@ -1,123 +1,123 @@
-# HW10 - 탄소중립 스마트 SCM 플랫폼
+# 🚢 탄소중립 스마트 SCM 플랫폼 (HW10)
 
-Java + PostgreSQL 기반의 조선·해양 산업 부품 공급망(SCM) 및 탄소배출 통합 관리 시스템
-
----
-
-## 콘솔 버전 실행 환경
-
-| 항목 | 버전 |
-|------|------|
-| Java (JDK) | 17 이상 |
-| PostgreSQL | 14 이상 |
-| Maven | 3.9 이상 |
+본 프로젝트는 **Java Spring Boot**와 **PostgreSQL**을 기반으로 한 조선·해양 산업의 부품 공급망(SCM) 및 탄소 배출 통합 관리 시스템입니다.
 
 ---
 
-## 빠른 시작 가이드
+## ✅ 필수 요구 사항 (Prerequisites)
 
-### 1단계: PostgreSQL DB 생성
+이 프로젝트를 실행하기 위해 다음 소프트웨어가 설치되어 있어야 합니다.
 
-```sql
--- postgres 계정으로 접속 후 실행
-CREATE DATABASE scm_db OWNER parkjongjin;
-```
+- **Java (JDK)**: 17 버전 이상
+- **Maven**: 3.9 버전 이상
+- **PostgreSQL**: 14 버전 이상
 
-### 2단계: 스키마 및 샘플 데이터 적용
+---
 
-```powershell
-cd C:\Users\pjjpj\Desktop\hw10
+## 🚀 빠른 시작 가이드 (Quick Start)
 
-# 스키마 생성
-psql -U parkjongjin -d scm_db -f schema.sql
+### 1단계: 데이터베이스 설정 (Database Setup)
 
-# 샘플 데이터 적용
-psql -U parkjongjin -d scm_db -f seed.sql
-```
+PostgreSQL을 설치한 후, 아래 명령어를 순서대로 실행하여 데이터베이스와 초기 데이터를 설정합니다.
 
-### 3단계: DB 접속 설정
+1.  **데이터베이스 생성**
 
-프로젝트 루트에 `config.properties` 파일 생성:
+    ```sql
+    -- psql 또는 pgAdmin 쿼리툴에서 실행
+    CREATE DATABASE scm_db;
+    ```
+
+2.  **테이블 및 데이터 생성**
+    프로젝트 루트 폴더(`Web_code/`)에 있는 `schema.sql`과 `seed.sql` 파일을 실행합니다.
+
+    **(방법 A) 커맨드라인(CMD/Terminal) 사용 시:**
+
+    ```bash
+    # 프로젝트 루트 폴더에서 실행
+    psql -U [사용자명] -d scm_db -f schema.sql
+    psql -U [사용자명] -d scm_db -f seed.sql
+    ```
+
+    _(윈도우의 경우 psql 환경변수 설정이 필요할 수 있습니다. pgAdmin을 사용하는 것을 권장합니다.)_
+
+    **(방법 B) pgAdmin / DBeaver 사용 시:**
+
+    - `scm_db` 데이터베이스에 접속합니다.
+    - Query Tool을 엽니다.
+    - `schema.sql` 파일 내용을 복사-붙여넣기 후 실행합니다.
+    - `seed.sql` 파일 내용을 복사-붙여넣기 후 실행합니다.
+
+---
+
+### 2단계: 프로젝트 설정 (Configuration)
+
+DB 접속 정보를 본인의 환경에 맞게 수정해야 합니다.
+
+1.  `src/main/resources/application.properties` 파일을 엽니다.
+2.  아래 내용을 본인의 PostgreSQL 계정 정보로 변경하세요.
 
 ```properties
-db.url=jdbc:postgresql://localhost:5432/scm_db
-db.user=내 이름
-db.password=내 비밀번호
-```
-
-> ⚠️ 본인의 DB 비밀번호로 수정하세요!
-
-### 4단계: 빌드 및 실행
-
-```powershell
-cd C:\Users\pjjpj\Desktop\hw10
-
-# 방법 1: Maven으로 바로 실행 (추천)
-mvn exec:java
-
-# 방법 2: JAR 패키징 후 실행
-mvn clean package
-java -jar target/carbon-neutral-scm-1.0.0.jar
+# ⚠️ 사용자명과 비밀번호를 본인 설정에 맞게 변경하세요!
+spring.datasource.url=jdbc:postgresql://localhost:5432/scm_db
+spring.datasource.username=postgres  <-- 여기 변경 (예: parkjongjin)
+spring.datasource.password=1234      <-- 여기 변경 (예: park1234!)
 ```
 
 ---
 
-## 주요 기능
+### 3단계: 실행 (Run)
 
-### 기능 1: 프로젝트 대시보드
-- 프로젝트 ID 또는 선박명으로 검색
-- 총 발주 금액, 공급업체별 TOP 3
-- 탄소배출 합계 (운송/보관/전체)
-- 탄소 집약도 (kg CO₂e / 백만 원) 지표
+Maven을 사용하여 프로젝트를 실행합니다. 프론트엔드 빌드(Node.js, Terraform, TailwindCSS)는 자동으로 수행됩니다.
 
-### 기능 2: 발주 등록 (트랜잭션)
-- 발주서 + 발주항목 + 납품 + 재고 반영을 단일 트랜잭션으로 처리
-- 오류 발생 시 전체 롤백
-- 교착상태(Deadlock) 발생 시 자동 재시도
+1.  프로젝트 루트 폴더(`Web_code/`)에서 터미널(CMD/Powershell)을 엽니다.
+2.  다음 명령어를 입력합니다.
 
-### 기능 3: 공급업체 ESG/지연 리포트
-- ESG 등급 필터 (A~D 다중 선택)
-- 지연 납품 비율 필터
-- 공급업체 상세: 최근 5건 발주/납품 이력
+```bash
+mvn spring-boot:run
+```
+
+> **참고:** 최초 실행 시 라이브러리 다운로드 및 프론트엔드 환경 구성으로 인해 시간이 다소 소요될 수 있습니다.
 
 ---
 
-## 파일 구조
+## 🌐 접속 방법 (Usage)
 
-```
-hw10/
-├── config.properties      # DB 접속 설정 (본인이 생성)
-├── schema.sql             # 테이블 생성 SQL
-├── seed.sql               # 샘플 데이터
-├── pom.xml                # Maven 설정
-└── src/main/java/hw10/
-    ├── App.java           # 메인 진입점
-    ├── config/            # 설정 로드
-    ├── db/                # DB 연결
-    ├── dao/               # SQL 쿼리 (SELECT/INSERT)     ├── service/           # 트랜잭션 처리
-    ├── ui/                # 콘솔 UI (기능 1~3)
-    └── util/              # 로그, 입력, 에러처리
-```
+서버가 정상적으로 시작되면(`Started Application in...` 메시지 표시), 웹 브라우저를 열고 아래 주소로 접속하세요.
+
+- **메인 대시보드**: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)
+- **발주 관리**: [http://localhost:8080/order.html](http://localhost:8080/order.html)
+- **공급업체 리포트**: [http://localhost:8080/supplier.html](http://localhost:8080/supplier.html)
+- **설정**: [http://localhost:8080/setting.html](http://localhost:8080/setting.html)
 
 ---
 
-## 환경변수로 설정하기 (선택)
+## ❓ 자주 묻는 질문 (Troubleshooting)
 
-`config.properties` 대신 환경변수 사용 가능:
+**Q. `mvn` 명령어를 찾을 수 없다고 나와요.**
+A. Apache Maven이 설치되어 있지 않거나, 환경 변수(PATH) 설정이 안 되어 있는 경우입니다. Maven을 설치하거나 IDE(IntelliJ, Eclipse)의 내장 기능을 사용하세요.
 
-```powershell
-$env:DB_URL = "jdbc:postgresql://localhost:5432/scm_db"
-$env:DB_USER = "내 USER 이름"
-$env:DB_PASSWORD = "내 비밀번호"
-```
+**Q. 데이터베이스 연결 오류가 발생해요.**
+A. `application.properties` 파일의 `username`과 `password`가 PostgreSQL 설치 시 설정한 정보와 일치하는지 확인하세요. 또한 `scm_db` 데이터베이스가 생성되었는지 확인하세요.
+
+**Q. 8080 포트가 이미 사용 중이라고 나와요.**
+A. 다른 프로그램이 8080 포트를 사용 중입니다. `application.properties`에서 `server.port=8081`과 같이 포트 번호를 변경하고 다시 실행하세요.
 
 ---
 
-## 문제 해결
+## 📁 주요 기능 소개
 
-| 문제 | 해결 |
-|------|------|
-| `mvn` 명령어 인식 안 됨 | Maven 설치 후 PATH에 `C:\apache-maven-3.9.x\bin` 추가 |
-| `java` 명령어 인식 안 됨 | JDK 17 설치 후 PATH에 `C:\Program Files\Java\jdk-17\bin` 추가 |
-| `No suitable driver` 오류 | `java -jar` 대신 `mvn exec:java`로 실행 |
-| DB 접속 실패 | `config.properties` 파일 확인 및 PostgreSQL 서비스 실행 확인 |
+### 1. 📊 프로젝트 대시보드
+
+- 프로젝트별 탄소 배출량 및 진행 상황 모니터링
+- **선박 탄소 집약도(CII)** 및 주요 지표 시각화
+- 공급업체별 납품 현황 분석
+
+### 2. 📝 발주 관리 및 트랜잭션
+
+- 부품 발주부터 납품, 재고 반영까지 단일 트랜잭션으로 처리
+- 데이터 무결성 보장 및 교착상태(Deadlock) 자동 감지/재시도 로직 적용
+
+### 3. 📉 공급망 리포트
+
+- 공급업체 ESG 등급(A~D) 기반 필터링
+- 납품 지연율 분석 및 우수/위험 공급업체 식별

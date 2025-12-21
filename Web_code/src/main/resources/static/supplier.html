@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>공급업체 ESG 및 지연 납품 리포트 - Smart SCM</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230f766e'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='Arial'%3ESC%3C/text%3E%3C/svg%3E"/>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=Noto+Sans+KR:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <!-- 국기 아이콘 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons@7/css/flag-icons.min.css">
+    <!-- Tailwind CSS (빌드된 상태) -->
+    <link href="css/tailwind.css" rel="stylesheet"/>
+    <!-- 커스텀 스타일 -->
+    <link href="css/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background dark:bg-background-dark text-text-main dark:text-white font-display overflow-hidden selection:bg-primary dark:selection:bg-primary-cyan selection:text-white">
+    <div class="flex h-screen w-full relative">
+        <!-- Mobile Nav Toggle -->
+        <input class="hidden peer" id="nav-toggle" type="checkbox"/>
+        <label class="peer-checked:block hidden fixed inset-0 bg-black/50 z-40 md:hidden" for="nav-toggle"></label>
+
+        <!-- Sidebar -->
+        <aside class="slide-menu fixed md:static inset-y-0 left-0 z-50 w-72 flex-shrink-0 border-r border-border-color dark:border-border-dark bg-surface dark:bg-[#111618] flex flex-col justify-between p-4 shadow-xl md:shadow-none transition-transform duration-300">
+            <div class="flex flex-col gap-8">
+                <div class="flex items-center justify-between gap-3 px-2">
+                    <a href="index.html" class="flex flex-col px-4 py-3 rounded-lg border border-border-color dark:border-border-dark hover:bg-gray-50 dark:hover:bg-[#283539] transition-all cursor-pointer">
+                        <h1 class="text-text-main dark:text-white text-lg font-bold leading-tight tracking-tight">Smart SCM</h1>
+                        <p class="text-text-sub dark:text-text-secondary text-xs font-medium">탄소 중립 시스템</p>
+                    </a>
+                    <label class="md:hidden text-text-sub dark:text-text-secondary cursor-pointer hover:text-primary dark:hover:text-white transition-colors" for="nav-toggle">
+                        <span class="material-symbols-outlined">close</span>
+                    </label>
+                </div>
+                
+                <nav class="flex flex-col gap-2">
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="index.html">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">home</span>
+                        <span class="font-medium">HOME</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="dashboard.html">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+                        <span class="font-medium">프로젝트 대시보드</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="order.html">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">package_2</span>
+                        <span class="font-medium">주문/납품 관리</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-light dark:bg-primary-cyan/10 text-primary dark:text-primary-cyan font-bold shadow-sm ring-1 ring-primary/10 dark:ring-0 border-l-4 border-primary dark:border-primary-cyan transition-all" href="supplier.html">
+                        <span class="material-symbols-outlined" data-weight="fill">description</span>
+                        <span>공급망 리포트</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group" href="setting.html">
+                    <span class="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
+                    <span class="font-medium">설정</span>
+                </a>
+                <div class="mt-4 pt-4 border-t border-border-color dark:border-border-dark flex items-center justify-between gap-3 px-2">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="h-10 w-10 rounded-full bg-primary/20 dark:bg-primary-cyan/20 ring-2 ring-border dark:ring-border-dark flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-lg">person</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <p class="text-sm font-semibold text-text-main dark:text-white">Admin</p>
+                            <p class="text-xs text-text-sub dark:text-text-secondary">관리자</p>
+                        </div>
+                    </div>
+                    <button id="theme-toggle" class="theme-toggle" aria-label="테마 전환">
+                        <span class="material-symbols-outlined theme-toggle-icon">dark_mode</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative w-full bg-background dark:bg-background-dark">
+            <!-- 모바일 헤더 -->
+            <div class="md:hidden flex items-center justify-between p-4 border-b border-border-color dark:border-border-dark bg-surface dark:bg-[#111618]">
+                <a href="index.html" class="font-bold text-text-main dark:text-white px-3 py-2 rounded-lg border border-border-color dark:border-border-dark hover:bg-gray-50 dark:hover:bg-[#283539] transition-all">
+                    Smart SCM
+                </a>
+                <label class="text-text-main dark:text-white p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors" for="nav-toggle">
+                    <span class="material-symbols-outlined">menu</span>
+                </label>
+            </div>
+
+            <!-- 콘텐츠 영역 -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+                <div class="max-w-[1920px] mx-auto w-full">
+                <!-- 페이지 헤더 -->
+                <div class="flex flex-col gap-2 mb-6">
+                    <nav aria-label="Breadcrumb" class="flex items-center text-sm font-medium text-text-sub dark:text-text-secondary mb-2">
+                        <ol class="flex items-center gap-2">
+                            <li class="flex items-center gap-2 hover:text-primary dark:hover:text-white transition-colors">
+                                <a class="flex items-center" href="index.html">
+                                    <span class="material-symbols-outlined text-[20px]">home</span>
+                                    <span class="ml-1">HOME</span>
+                                </a>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="material-symbols-outlined text-[18px] text-border dark:text-border-dark">chevron_right</span>
+                            </li>
+                            <li aria-current="page" class="text-primary dark:text-primary-dark font-bold">공급업체 ESG 및 지연 납품 리포트</li>
+                        </ol>
+                    </nav>
+                    <div class="flex justify-between items-end">
+                        <h2 class="text-2xl md:text-3xl font-black text-text-main dark:text-white tracking-tight">공급업체 ESG 및 지연 납품 리포트</h2>
+                    </div>
+                </div>
+
+                <!-- 메인 그리드 레이아웃 -->
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    <!-- 좌측 패널: 필터 및 테이블 -->
+                    <div class="xl:col-span-8 flex flex-col gap-4">
+                        <!-- 필터 섹션 -->
+                        <div class="bg-surface dark:bg-card-dark rounded-xl border border-border-color dark:border-border-dark p-5 shadow-soft dark:shadow-lg flex-shrink-0">
+                            <div class="flex flex-col lg:flex-row gap-6 items-start lg:items-end">
+                                <div class="flex-1">
+                                    <label class="block text-xs font-bold text-text-sub dark:text-text-secondary uppercase tracking-wider mb-2">ESG 등급</label>
+                                    <div class="flex gap-2">
+                                        <label class="cursor-pointer checkbox-wrapper">
+                                            <input checked="" class="hidden" type="checkbox"/>
+                                            <div class="size-10 rounded-lg dark:rounded flex items-center justify-center border border-border-color dark:border-border-dark bg-white dark:bg-[#111618] text-sm font-bold text-text-sub dark:text-text-secondary hover:border-primary dark:hover:border-primary-cyan hover:text-primary dark:hover:text-primary-cyan transition-all shadow-sm dark:shadow-none">A</div>
+                                        </label>
+                                        <label class="cursor-pointer checkbox-wrapper">
+                                            <input checked="" class="hidden" type="checkbox"/>
+                                            <div class="size-10 rounded-lg dark:rounded flex items-center justify-center border border-border-color dark:border-border-dark bg-white dark:bg-[#111618] text-sm font-bold text-text-sub dark:text-text-secondary hover:border-primary dark:hover:border-primary-cyan hover:text-primary dark:hover:text-primary-cyan transition-all shadow-sm dark:shadow-none">B</div>
+                                        </label>
+                                        <label class="cursor-pointer checkbox-wrapper">
+                                            <input class="hidden" type="checkbox"/>
+                                            <div class="size-10 rounded-lg dark:rounded flex items-center justify-center border border-border-color dark:border-border-dark bg-white dark:bg-[#111618] text-sm font-bold text-text-sub dark:text-text-secondary hover:border-primary dark:hover:border-primary-cyan hover:text-primary dark:hover:text-primary-cyan transition-all shadow-sm dark:shadow-none">C</div>
+                                        </label>
+                                        <label class="cursor-pointer checkbox-wrapper">
+                                            <input class="hidden" type="checkbox"/>
+                                            <div class="size-10 rounded-lg dark:rounded flex items-center justify-center border border-border-color dark:border-border-dark bg-white dark:bg-[#111618] text-sm font-bold text-text-sub dark:text-text-secondary hover:border-primary dark:hover:border-primary-cyan hover:text-primary dark:hover:text-primary-cyan transition-all shadow-sm dark:shadow-none">D</div>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="flex-1 w-full lg:w-auto">
+                                    <label class="block text-xs font-bold text-text-sub dark:text-text-secondary uppercase tracking-wider mb-2">지연 납품률 (%)</label>
+                                    <div class="flex items-center gap-2">
+                                        <div class="relative flex-1">
+                                            <input class="w-full bg-white dark:bg-[#111618] border border-border-color dark:border-border-dark rounded-lg dark:rounded px-3 py-2 dark:py-1.5 text-text-main dark:text-white text-sm focus:ring-2 dark:focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary-cyan focus:border-primary dark:focus:border-primary-cyan shadow-sm dark:shadow-none" placeholder="최소" type="number"/>
+                                            <span class="absolute right-3 top-2 dark:top-1.5 text-xs text-text-sub dark:text-text-secondary font-medium">%</span>
+                                        </div>
+                                        <span class="text-text-sub dark:text-text-secondary font-medium">-</span>
+                                        <div class="relative flex-1">
+                                            <input class="w-full bg-white dark:bg-[#111618] border border-border-color dark:border-border-dark rounded-lg dark:rounded px-3 py-2 dark:py-1.5 text-text-main dark:text-white text-sm focus:ring-2 dark:focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary-cyan focus:border-primary dark:focus:border-primary-cyan shadow-sm dark:shadow-none" placeholder="최대" type="number"/>
+                                            <span class="absolute right-3 top-2 dark:top-1.5 text-xs text-text-sub dark:text-text-secondary font-medium">%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="w-full lg:w-auto bg-primary dark:bg-primary-cyan hover:bg-primary-dark dark:hover:bg-sky-400 text-white font-bold px-6 py-2 rounded-lg shadow-md shadow-primary/20 dark:shadow-primary-cyan/20 transition-all flex items-center justify-center gap-2 h-[38px] dark:h-9">
+                                    <span class="material-symbols-outlined text-sm">filter_list</span>
+                                    필터 적용
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 테이블 섹션 -->
+                        <div class="bg-surface dark:bg-card-dark rounded-xl border border-border-color dark:border-border-dark shadow-soft dark:shadow-lg overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead class="bg-slate-50 dark:bg-[#111618] text-xs uppercase text-text-sub dark:text-text-secondary font-bold dark:font-semibold sticky top-0 z-10">
+                                        <tr>
+                                            <th class="p-4 border-b border-border-color dark:border-border-dark cursor-pointer hover:bg-slate-100 dark:hover:bg-transparent hover:text-primary dark:hover:text-white transition-colors group w-28 whitespace-nowrap">
+                                                <div class="flex items-center gap-1">ID <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-primary dark:text-white">sort</span></div>
+                                            </th>
+                                            <th class="p-4 border-b border-border-color dark:border-border-dark cursor-pointer hover:bg-slate-100 dark:hover:bg-transparent hover:text-primary dark:hover:text-white transition-colors group whitespace-nowrap">
+                                                <div class="flex items-center gap-1">회사명 <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-primary dark:text-white">sort</span></div>
+                                            </th>
+                                            <th class="p-4 border-b border-border-color dark:border-border-dark cursor-pointer hover:bg-slate-100 dark:hover:bg-transparent hover:text-primary dark:hover:text-white transition-colors group whitespace-nowrap">
+                                                <div class="flex items-center gap-1">국가 <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-primary dark:text-white">sort</span></div>
+                                            </th>
+                                            <th class="p-4 border-b border-border-color dark:border-border-dark cursor-pointer hover:bg-slate-100 dark:hover:bg-transparent hover:text-primary dark:hover:text-white transition-colors group w-24 whitespace-nowrap">
+                                                <div class="flex items-center gap-1">ESG <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-primary dark:text-white">sort</span></div>
+                                            </th>
+                                            <th class="p-4 border-b border-border-color dark:border-border-dark text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-transparent hover:text-primary dark:hover:text-white transition-colors group whitespace-nowrap">
+                                                <div class="flex items-center justify-end gap-1">총 주문액 <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-primary dark:text-white">sort</span></div>
+                                            </th>
+                                            <th class="p-4 border-b border-border-color dark:border-border-dark text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-transparent hover:text-primary dark:hover:text-white transition-colors group whitespace-nowrap">
+                                                <div class="flex items-center justify-end gap-1">지연률 <span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 text-primary dark:text-white">sort</span></div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="supplier-table-body" class="divide-y divide-border-color dark:divide-border-dark text-sm">
+                                        <!-- 데이터가 동적으로 로드됩니다 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- 테이블 하단 정보 -->
+                            <div id="table-footer" class="bg-surface dark:bg-[#111618] border-t border-border-color dark:border-border-dark p-3 flex justify-between items-center text-xs text-text-sub dark:text-text-secondary">
+                                <span id="table-count" class="font-medium">로딩 중...</span>
+                                <div id="pagination" class="flex gap-1.5">
+                                    <!-- 페이징 버튼이 동적으로 생성됩니다 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 우측 패널: 상세 보기 -->
+                    <div class="xl:col-span-4">
+                        <div class="bg-surface dark:bg-card-dark rounded-xl border border-border-color dark:border-border-dark shadow-soft dark:shadow-xl overflow-hidden">
+                            <!-- 상세 정보 헤더 -->
+                            <div class="p-6 border-b border-teal-800 bg-gradient-to-r from-teal-800 to-primary-dark dark:from-[#111618] dark:to-card-dark relative overflow-hidden">
+                                <div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                                    <span class="material-symbols-outlined text-[120px] text-white">factory</span>
+                                </div>
+                                <div class="relative z-10">
+                                    <div class="mb-2">
+                                        <span class="text-xs font-mono text-white dark:text-primary-cyan bg-white/20 dark:bg-primary-cyan/10 px-2 py-0.5 rounded backdrop-blur-sm border border-white/20 dark:border-primary-cyan/20">ID: SUP-001</span>
+                                    </div>
+                                    <h3 class="text-2xl font-black text-white mb-1 tracking-tight">Steel Corp Global</h3>
+                                    <div class="flex items-center gap-2 text-sm text-teal-100 dark:text-text-secondary mb-6 dark:mb-4">
+                                        <span class="font-medium">미국, 펜실베이니아</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="bg-white/10 dark:bg-[#111618] backdrop-blur-md p-3 rounded-lg border border-white/20 dark:border-border-dark shadow-inner dark:shadow-none">
+                                            <p class="text-[10px] uppercase text-teal-100 dark:text-text-secondary font-bold mb-0.5">총 주문액</p>
+                                            <p class="text-lg font-mono text-white font-bold">$40,200,000</p>
+                                        </div>
+                                        <div class="bg-white/10 dark:bg-[#111618] backdrop-blur-md p-3 rounded-lg border border-white/20 dark:border-border-dark shadow-inner dark:shadow-none">
+                                            <p class="text-[10px] uppercase text-teal-100 dark:text-text-secondary font-bold mb-0.5">평균 지연률</p>
+                                            <p class="text-lg font-mono text-green-300 dark:text-success font-bold flex items-center gap-1">
+                                                0.0%
+                                                <span class="material-symbols-outlined text-sm">check_circle</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 최근 발주 내역 -->
+                            <div class="p-4 md:p-6 bg-surface dark:bg-card-dark">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-sm font-bold text-text-sub dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-lg dark:text-sm">receipt_long</span>
+                                        최근 주문
+                                    </h4>
+                                </div>
+                                <div id="recent-orders-container" class="flex flex-col gap-3">
+                                    <!-- 발주서 목록이 동적으로 로드됩니다 -->
+                                </div>
+                            </div>
+                            <!-- 상세 화면 하단 정보 -->
+                            <div id="detail-footer" class="p-4 border-t border-border-color dark:border-border-dark bg-slate-50 dark:bg-[#111618]">
+                                <div class="flex justify-between items-center text-xs text-text-sub dark:text-text-secondary font-medium">
+                                    <span id="detail-page-info">-</span>
+                                    <div class="flex gap-2">
+                                        <button id="detail-prev-btn" class="text-text-sub dark:text-text-secondary hover:text-primary dark:hover:text-white disabled:opacity-50 transition-colors" disabled="">이전</button>
+                                        <span class="text-border-color dark:text-border-dark">|</span>
+                                        <button id="detail-next-btn" class="text-text-sub dark:text-text-secondary hover:text-primary dark:hover:text-white transition-colors">다음</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 테마 전환 스크립트 -->
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/supplier.js"></script>
+</body>
+</html>
+

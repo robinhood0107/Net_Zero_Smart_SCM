@@ -1,4 +1,4 @@
-package hw10.dao;
+package hw10.repository;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,59 +8,44 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 공급업체 리포트 SQL 모음 (기능 3용)
- * 
- * [과제 요구사항]
- * - 공급업체 목록 (ESG, 지연비율 포함)
- * - 필터링 (ESG 등급, 지연비율 범위)
- * - 상세 (최근 발주서 + 페이징)
+ * 공급업체 정보 조회 및 통계 리포지토리.
  */
 public final class SupplierRepository {
 
-    /** 공급업체 목록 행 (지연 비율 계산 포함) */
+    // 공급업체 목록용 레코드. 지연율 통계 포함.
     public record SupplierRow(
             int supplierId,
             String name,
             String country,
             String esgGrade,
             double totalOrderAmount,
-            int delayedDeliveries,   // 지연된 납품 건수
-            int totalDeliveries,     // 전체 납품 건수
-            double delayRatio        // 지연 비율 (0~1)
-    ) {}
+            int delayedDeliveries,
+            int totalDeliveries,
+            double delayRatio) {
+    }
 
-    /** 발주서 상세 행 */
+    // 공급업체 상세용 최근 발주 기록.
     public record SupplierPoRow(
             int poid,
             java.sql.Date orderDate,
             String status,
-            boolean delayed  // 지연 여부
-    ) {}
+            boolean delayed) {
+    }
 
     /**
-     * 공급업체 목록 조회 (필터 적용 가능)
-     * 
-     * [과제 요구사항]
-     * - 지연 납품 비율 = Delivery.status='지연' 기준
-     * - ESG 등급 다중 선택 필터
-     * - 지연 비율 상한/하한 필터
-     * 
-     * WITH CTE 사용해서 복잡한 쿼리 구조화함
-     * CTE = Common Table Expression (임시 테이블 같은 거)
-     * 
-     * @param conn DB 커넥션
-     * @param esgGrades ESG 등급 필터 (null이면 전체)
-     * @param minRatio 지연비율 하한 (null이면 제한 없음)
-     * @param maxRatio 지연비율 상한 (null이면 제한 없음)
-     * @return 공급업체 리스트
+     * 공급업체 목록 조회.
+     * ESG 등급, 지연율 필터링 지원.
+     * CTE(Common Table Expressions) 사용 통계 계산.
      */
     public List<SupplierRow> listSuppliers(Connection conn,
-                                          List<String> esgGrades,
-                                          Double minRatio,
-                                          Double maxRatio) throws SQLException {
-        // StringBuilder: 동적으로 SQL 문자열 만들 때 사용
-        // cpp의 stringstream이랑 비슷
+            List<String> esgGrades,
+            Double minRatio,
+            Double maxRatio) throws SQLException {
+
         StringBuilder sb = new StringBuilder();
+        // 1. 업체별 총 발주 금액 계산 (order_totals)
+        // 2. 업체별 배송 건수 및 지연 건수 계산 (delivery_stats)
+        // 3. 업체 정보 및 통계 병합 (base)
         sb.append("""
                 WITH order_totals AS (
                   SELECT po.SupplierID, SUM(pol.Quantity * pol.UnitPriceAtOrder) AS total_amount
@@ -92,43 +77,43 @@ public final class SupplierRepository {
                 FROM base
                 WHERE 1=1
                 """);
-        // WHERE 1=1 트릭: 이후에 AND 조건 붙이기 편하려고
 
-        // 동적으로 바인딩할 파라미터들
+        // 파라미터 리스트.
         List<Object> params = new ArrayList<>();
 
-        // ESG 등급 필터 추가
+        // ESG 등급 필터 적용.
         if (esgGrades != null && !esgGrades.isEmpty()) {
             sb.append(" AND ESGGrade IN (");
             for (int i = 0; i < esgGrades.size(); i++) {
-                if (i > 0) sb.append(", ");
-                sb.append("?");  // 플레이스홀더
+                if (i > 0)
+                    sb.append(", ");
+                sb.append("?");
                 params.add(esgGrades.get(i));
             }
             sb.append(")");
         }
-        
-        // 지연비율 하한 필터
+
+        // 최소 지연율 필터 적용.
         if (minRatio != null) {
             sb.append(" AND delay_ratio >= ?");
             params.add(minRatio);
         }
-        
-        // 지연비율 상한 필터
+
+        // 최대 지연율 필터 적용.
         if (maxRatio != null) {
             sb.append(" AND delay_ratio <= ?");
             params.add(maxRatio);
         }
 
-        // 정렬: 발주금액 내림차순, 지연비율 내림차순
+        // 발주 금액 내림차순, 지연율 내림차순 정렬.
         sb.append(" ORDER BY total_order_amount DESC, delay_ratio DESC, SupplierID");
 
         try (PreparedStatement ps = conn.prepareStatement(sb.toString())) {
             // 파라미터 바인딩
             for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));  // JDBC는 1-indexed
+                ps.setObject(i + 1, params.get(i));
             }
-            
+
             try (ResultSet rs = ps.executeQuery()) {
                 List<SupplierRow> out = new ArrayList<>();
                 while (rs.next()) {
@@ -140,8 +125,7 @@ public final class SupplierRepository {
                             rs.getDouble("total_order_amount"),
                             rs.getInt("delayed_deliveries"),
                             rs.getInt("total_deliveries"),
-                            rs.getDouble("delay_ratio")
-                    ));
+                            rs.getDouble("delay_ratio")));
                 }
                 return out;
             }
@@ -149,18 +133,11 @@ public final class SupplierRepository {
     }
 
     /**
-     * 특정 공급업체의 최근 발주서 조회 (페이징)
-     * 
-     * [과제 요구사항] 최근 N개 발주서 + 지연 여부 요약
-     * 
-     * @param conn DB 커넥션
-     * @param supplierId 공급업체 ID
-     * @param limit 한 페이지 크기
-     * @param offset 건너뛸 개수 (페이지 * 페이지크기)
-     * @return 발주서 리스트
+     * 특정 공급업체의 최근 발주 내역 조회.
+     * 배송 지연 여부 포함.
      */
-    public List<SupplierPoRow> recentPurchaseOrders(Connection conn, int supplierId, 
-                                                   int limit, int offset) throws SQLException {
+    public List<SupplierPoRow> recentPurchaseOrders(Connection conn, int supplierId,
+            int limit, int offset) throws SQLException {
         String sql = """
                 SELECT po.POID, po.OrderDate, po.Status,
                        CASE WHEN EXISTS (
@@ -172,13 +149,12 @@ public final class SupplierRepository {
                 ORDER BY po.OrderDate DESC, po.POID DESC
                 LIMIT ? OFFSET ?
                 """;
-        // EXISTS 서브쿼리: 해당 발주서에 지연 납품이 있는지 체크
-        
+
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, supplierId);
             ps.setInt(2, limit);
             ps.setInt(3, offset);
-            
+
             try (ResultSet rs = ps.executeQuery()) {
                 List<SupplierPoRow> out = new ArrayList<>();
                 while (rs.next()) {
@@ -186,8 +162,7 @@ public final class SupplierRepository {
                             rs.getInt("POID"),
                             rs.getDate("OrderDate"),
                             rs.getString("Status"),
-                            rs.getBoolean("delayed")
-                    ));
+                            rs.getBoolean("delayed")));
                 }
                 return out;
             }

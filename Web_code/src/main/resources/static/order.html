@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Smart SCM - 발주 및 납품 관리</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230f766e'/%3E%3Ctext x='50' y='70' font-size='60' text-anchor='middle' fill='white' font-family='Arial'%3ESC%3C/text%3E%3C/svg%3E"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <!-- Tailwind CSS (빌드된 파일) -->
+    <link href="css/tailwind.css" rel="stylesheet"/>
+    <!-- Custom Styles -->
+    <link href="css/styles.css" rel="stylesheet"/>
+</head>
+<body class="bg-background dark:bg-background-dark text-text-main dark:text-white font-sans overflow-hidden antialiased selection:bg-primary dark:selection:bg-primary-dark selection:text-white">
+    <div class="flex h-screen w-full relative">
+        <!-- 모바일 메뉴 토글 체크박스 -->
+        <input class="hidden peer" id="nav-toggle" type="checkbox"/>
+        <label class="peer-checked:block hidden fixed inset-0 bg-black/50 z-40 md:hidden" for="nav-toggle"></label>
+        
+        <!-- 좌측 사이드바 메뉴 -->
+        <aside class="slide-menu fixed md:static inset-y-0 left-0 z-50 w-72 flex-shrink-0 border-r border-border dark:border-border-dark bg-surface dark:bg-[#111618] flex flex-col justify-between p-4 shadow-xl md:shadow-none transition-transform duration-300">
+            <div class="flex flex-col gap-8">
+                <div class="flex items-center justify-between gap-3 px-2">
+                    <a href="index.html" class="flex flex-col px-4 py-3 rounded-lg border border-border dark:border-border-dark hover:bg-gray-50 dark:hover:bg-[#283539] transition-all cursor-pointer">
+                        <h1 class="text-text-main dark:text-white text-lg font-bold leading-tight tracking-tight">Smart SCM</h1>
+                        <p class="text-text-sub dark:text-text-secondary text-xs font-medium">탄소 중립 시스템</p>
+                    </a>
+                    <label class="md:hidden text-text-sub dark:text-text-secondary cursor-pointer hover:text-primary dark:hover:text-white transition-colors" for="nav-toggle">
+                        <span class="material-symbols-outlined">close</span>
+                    </label>
+                </div>
+                
+                <nav class="flex flex-col gap-2">
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="index.html">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">home</span>
+                        <span class="font-medium">HOME</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="dashboard.html">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">dashboard</span>
+                        <span class="font-medium">프로젝트 대시보드</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-light dark:bg-primary-cyan/10 text-primary dark:text-primary-cyan font-bold shadow-sm ring-1 ring-primary/10 dark:ring-0 border-l-4 border-primary dark:border-primary-cyan transition-all" href="order.html">
+                        <span class="material-symbols-outlined" data-weight="fill">package_2</span>
+                        <span>주문/납품 관리</span>
+                    </a>
+                    <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group border-l-4 border-transparent hover:border-gray-200 dark:hover:border-text-secondary" href="supplier.html">
+                        <span class="material-symbols-outlined group-hover:scale-110 transition-transform">description</span>
+                        <span class="font-medium">공급망 리포트</span>
+                    </a>
+                </nav>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <a class="flex items-center gap-3 px-4 py-3 rounded-lg text-text-sub dark:text-text-secondary hover:bg-gray-50 dark:hover:bg-[#283539] hover:text-primary dark:hover:text-white transition-all group" href="setting.html">
+                    <span class="material-symbols-outlined group-hover:rotate-90 transition-transform">settings</span>
+                    <span class="font-medium">설정</span>
+                </a>
+                <div class="mt-4 pt-4 border-t border-border dark:border-border-dark flex items-center justify-between gap-3 px-2">
+                    <div class="flex items-center gap-3 flex-1">
+                        <div class="h-10 w-10 rounded-full bg-primary/20 dark:bg-primary-cyan/20 ring-2 ring-border dark:ring-border-dark flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-lg">person</span>
+                        </div>
+                        <div class="flex flex-col">
+                            <p class="text-sm font-semibold text-text-main dark:text-white">Admin</p>
+                            <p class="text-xs text-text-sub dark:text-text-secondary">관리자</p>
+                        </div>
+                    </div>
+                    <button id="theme-toggle" class="theme-toggle" aria-label="테마 전환">
+                        <span class="material-symbols-outlined theme-toggle-icon">dark_mode</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="flex-1 flex flex-col h-full overflow-hidden relative w-full bg-background dark:bg-background-dark">
+            <!-- 모바일 헤더 -->
+            <div class="md:hidden flex items-center justify-between p-4 border-b border-border dark:border-border-dark bg-surface dark:bg-[#111618]">
+                <a href="index.html" class="font-bold text-text-main dark:text-white px-3 py-2 rounded-lg border border-border dark:border-border-dark hover:bg-gray-50 dark:hover:bg-[#283539] transition-all">
+                    Smart SCM
+                </a>
+                <label class="text-text-main dark:text-white p-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors" for="nav-toggle">
+                    <span class="material-symbols-outlined">menu</span>
+                </label>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6 md:p-10 lg:px-16 scroll-smooth">
+                <div class="max-w-7xl mx-auto flex flex-col gap-8 pb-20">
+                    <!-- 브레드크럼 네비게이션 -->
+                    <nav aria-label="Breadcrumb" class="flex items-center text-sm font-medium text-text-sub dark:text-text-secondary mb-2">
+                        <ol class="flex items-center gap-2">
+                            <li class="flex items-center gap-2 hover:text-primary dark:hover:text-white transition-colors">
+                                <a class="flex items-center" href="index.html">
+                                    <span class="material-symbols-outlined text-[20px]">home</span>
+                                    <span class="ml-1">HOME</span>
+                                </a>
+                            </li>
+                            <li class="flex items-center">
+                                <span class="material-symbols-outlined text-[18px] text-border dark:text-border-dark">chevron_right</span>
+                            </li>
+                            <li aria-current="page" class="text-primary dark:text-primary-dark font-bold">발주 및 납품 관리</li>
+                        </ol>
+                    </nav>
+                    
+                    <!-- 페이지 헤더 -->
+                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div class="flex flex-col gap-2 max-w-2xl">
+                            <h1 class="text-3xl md:text-4xl font-black text-text-main dark:text-white tracking-tight">
+                                발주 및 납품 관리 <span class="text-primary dark:text-primary-cyan font-light block sm:inline text-2xl">(Order &amp; Delivery)</span>
+                            </h1>
+                            <p class="text-text-sub dark:text-text-secondary text-base leading-relaxed">
+                                신규 조달 발주를 생성하고 초기 재고 배분을 관리합니다. 모든 프로젝트 ID는 조선 데이터베이스 기준으로 검증됩니다.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-border dark:border-border-dark"/>
+                    
+                    <hr class="border-border dark:border-border-dark"/>
+                    
+                    <!-- 트랜잭션 롤백 테스트를 위한 발주 헤더 정보 입력 -->
+                    <section aria-label="Order Header Information" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 flex flex-col gap-4">
+                            <h2 class="text-xl font-bold text-text-main dark:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary dark:text-primary-cyan">description</span>
+                                신규 발주 등록
+                            </h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm font-medium">프로젝트 ID / 명칭</span>
+                                    <div class="relative group">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-sub dark:text-text-secondary group-focus-within:text-primary dark:group-focus-within:text-primary-cyan transition-colors z-10 pointer-events-none">sailing</span>
+                                        <input id="project-select" list="project-datalist" 
+                                               class="w-full h-12 rounded-lg bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark text-text-main dark:text-white pl-12 pr-10 focus:ring-2 focus:ring-primary dark:focus:ring-primary-cyan focus:border-transparent transition-all outline-none" 
+                                               placeholder="프로젝트 선택 또는 ID 직접 입력...">
+                                        <datalist id="project-datalist">
+                                            <!-- JS로 로드됨 -->
+                                        </datalist>
+                                    </div>
+                                </label>
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm font-medium">공급업체 ID / 명칭</span>
+                                    <div class="relative group">
+                                        <span class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-sub dark:text-text-secondary group-focus-within:text-primary dark:group-focus-within:text-primary-cyan transition-colors z-10 pointer-events-none">domain</span>
+                                        <input id="supplier-select" list="supplier-datalist" 
+                                               class="w-full h-12 rounded-lg bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark text-text-main dark:text-white pl-12 pr-10 focus:ring-2 focus:ring-primary dark:focus:ring-primary-cyan focus:border-transparent transition-all outline-none" 
+                                               placeholder="공급업체 선택 또는 ID 직접 입력...">
+                                        <datalist id="supplier-datalist">
+                                            <!-- JS로 로드됨 -->
+                                        </datalist>
+                                    </div>
+                                </label>
+                                <label class="flex flex-col gap-2 md:col-span-2">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm font-medium">주문 상태</span>
+                                    <div class="relative">
+                                        <select id="order-status" class="w-full h-12 rounded-lg bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark text-text-main dark:text-white px-4 pr-10 focus:ring-2 focus:ring-primary dark:focus:ring-primary-cyan focus:border-transparent cursor-pointer" style="appearance: none; -webkit-appearance: none; -moz-appearance: none;">
+                                            <option value="요청" selected>요청됨</option>
+                                            <option value="발주완료">발주완료</option>
+                                        </select>
+                                        <span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-sub dark:text-text-secondary pointer-events-none z-10">arrow_drop_down</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-1 bg-gray-50 dark:bg-surface-dark rounded-xl p-5 border border-border dark:border-border-dark flex flex-col justify-between h-full">
+                            <div class="flex flex-col gap-3">
+                                <span class="text-text-sub dark:text-text-secondary text-xs font-bold uppercase tracking-wider">주문 정보</span>
+                                <div class="flex justify-between items-center py-2 border-b border-border dark:border-border-dark">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm">주문 일자</span>
+                                    <span id="order-date" class="text-text-sub/50 dark:text-text-secondary/50 font-mono">-</span>
+                                </div>
+                                <div class="flex justify-between items-center py-2 border-b border-border dark:border-border-dark">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm">납품서 ID</span>
+                                    <span id="delivery-id" class="text-text-sub/50 dark:text-text-secondary/50 text-xs italic">발주 등록 시 자동 생성</span>
+                                </div>
+                                <div class="flex justify-between items-center py-2">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm">작성자</span>
+                                    <div class="flex items-center gap-2">
+                                        <div class="size-5 bg-primary/20 dark:bg-primary-cyan/20 rounded-full flex items-center justify-center">
+                                            <span class="text-primary dark:text-primary-cyan text-[10px] font-bold">A</span>
+                                        </div>
+                                        <span class="text-text-main dark:text-white text-sm">관리자</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- 부품 발주 항목 목록 관리 섹션 -->
+                    <section aria-label="Order Items" class="flex flex-col gap-4">
+                        <div class="flex justify-between items-end">
+                            <h2 class="text-xl font-bold text-text-main dark:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary dark:text-primary-cyan">list_alt</span>
+                                주문 항목
+                            </h2>
+                            <button id="add-row-btn" class="text-primary dark:text-primary-cyan hover:text-primary-dark dark:hover:text-white hover:bg-primary/10 dark:hover:bg-primary-cyan/20 text-sm font-medium px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[18px]">add</span>
+                                행 추가
+                            </button>
+                        </div>
+                        
+                        <div class="w-full overflow-hidden rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark shadow-soft dark:shadow-none">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 dark:bg-background-dark border-b border-border dark:border-border-dark text-text-sub dark:text-text-secondary text-xs uppercase tracking-wider">
+                                            <th class="p-4 font-medium w-12 text-center">#</th>
+                                            <th class="p-4 font-medium min-w-[160px]">부품 ID</th>
+                                            <th class="p-4 font-medium min-w-[200px]">설명</th>
+                                            <th class="p-4 font-medium w-32 text-right">수량</th>
+                                            <th class="p-4 font-medium w-40 text-right">단가 (₩)</th>
+                                            <th class="p-4 font-medium w-40 text-right">소계</th>
+                                            <th class="p-4 font-medium w-16 text-center">작업</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-text-main dark:text-white divide-y divide-border dark:divide-border-dark/50">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="bg-primary/5 dark:bg-primary-cyan/5">
+                                            <td class="p-4 text-right text-text-sub dark:text-text-secondary text-sm font-medium uppercase" colspan="5">총 합계</td>
+                                            <td id="grand-total" class="p-4 text-right text-xl font-bold text-primary dark:text-primary-cyan font-mono">₩ 0</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- 초기 납품 및 재고 자동 업데이트 섹션 -->
+                    <section aria-label="Inventory Update" class="bg-surface dark:bg-[#162024] border border-border dark:border-border-dark rounded-xl p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-80 h-80 bg-primary/5 dark:bg-primary-cyan/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                        
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border dark:border-border-dark pb-4">
+                            <div>
+                                <h2 class="text-xl font-bold text-text-main dark:text-white mb-1 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary dark:text-primary-cyan">warehouse</span>
+                                    초기 배송 및 재고 업데이트
+                                </h2>
+                                <p class="text-text-sub dark:text-text-secondary text-sm">
+                                    이 주문에 대한 초기 입고 설정을 구성합니다. 납품서는 자동으로 생성되며, 발주 수량의 50%가 초기 납품됩니다.
+                                </p>
+                            </div>
+                            <div class="bg-primary/10 dark:bg-primary-cyan/10 border border-primary/20 dark:border-primary-cyan/20 rounded-lg px-4 py-2 flex items-center gap-3">
+                                <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-sm">auto_awesome</span>
+                                <div class="text-xs">
+                                    <span class="block text-text-main dark:text-white font-semibold">자동 생성 기능!</span>
+                                    <span class="text-primary/80 dark:text-primary-cyan/80">납품서가 자동으로 생성됩니다</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <!-- 창고 선택 및 재고 조회 섹션 -->
+                            <div class="flex flex-col gap-6">
+                                <label class="flex flex-col gap-2">
+                                    <span class="text-text-sub dark:text-text-secondary text-sm font-medium">목적지 창고 ID</span>
+                                    <div class="relative">
+                                        <input id="warehouse-select" list="warehouse-datalist" 
+                                               class="w-full h-12 rounded-lg bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark text-text-main dark:text-white pl-4 pr-10 focus:ring-2 focus:ring-primary dark:focus:ring-primary-cyan focus:border-transparent transition-all outline-none" 
+                                               placeholder="창고 선택 또는 ID 직접 입력...">
+                                        <datalist id="warehouse-datalist">
+                                            <!-- JS로 로드됨 -->
+                                        </datalist>
+                                    </div>
+                                    <!-- 창고 재고 정보 -->
+                                    <div id="warehouse-inventory" class="mt-3 hidden">
+                                        <div class="bg-gray-50 dark:bg-surface-dark rounded-lg border border-border dark:border-border-dark p-4">
+                                            <div class="flex items-center gap-2 mb-3">
+                                                <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-[18px]">inventory_2</span>
+                                                <span class="text-text-main dark:text-white text-sm font-semibold">창고 재고</span>
+                                            </div>
+                                            <div id="inventory-list" class="space-y-2 max-h-[600px] overflow-y-auto">
+                                                <!-- 재고 목록이 여기에 동적으로 추가됩니다 -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </label>
+                                
+                                <!-- 초기 납품 안내 -->
+                                <div class="bg-primary/10 dark:bg-primary-cyan/10 border border-primary/20 dark:border-primary-cyan/20 rounded-lg p-4">
+                                    <div class="flex items-start gap-3">
+                                        <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-[20px]">info</span>
+                                        <div class="flex-1">
+                                            <h4 class="text-text-main dark:text-white text-sm font-semibold mb-1">자동 초기 납품</h4>
+                                            <p class="text-text-sub dark:text-text-secondary text-xs leading-relaxed">
+                                                발주 등록 시 <strong class="text-primary dark:text-primary-cyan">납품서 ID가 자동으로 생성</strong>되며, 각 항목의 <strong class="text-primary dark:text-primary-cyan">50%</strong>가 초기 납품됩니다. 재고는 선택한 창고에 자동 반영됩니다.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 발주 정보 미리보기 및 초기 납품 수량 -->
+                            <div class="lg:col-span-2 flex flex-col gap-4">
+                                <!-- 발주 정보 미리보기 카드 -->
+                                <div class="bg-gray-50 dark:bg-surface-dark rounded-lg border border-border dark:border-border-dark overflow-hidden">
+                                    <div class="bg-background dark:bg-background-dark px-4 py-3 border-b border-border dark:border-border-dark flex justify-between items-center">
+                                        <span class="text-text-main dark:text-white font-bold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-[18px]">description</span>
+                                            발주 정보 미리보기
+                                        </span>
+                                        <span class="material-symbols-outlined text-text-sub dark:text-text-secondary text-sm">receipt_long</span>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="grid grid-cols-3 gap-4">
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-text-sub dark:text-text-secondary text-xs">배송일</span>
+                                                <span id="preview-delivery-date" class="text-text-main dark:text-white font-mono text-sm font-semibold">-</span>
+                                            </div>
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-text-sub dark:text-text-secondary text-xs">발주 상태</span>
+                                                <span id="preview-status" class="text-accent font-semibold text-sm">-</span>
+                                            </div>
+                                            <div class="flex flex-col gap-1">
+                                                <span class="text-text-sub dark:text-text-secondary text-xs">초기 납품 수량</span>
+                                                <span id="preview-total-qty" class="text-text-main dark:text-white font-mono text-sm font-semibold">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 초기 납품 품목 상세 내역 -->
+                                <div class="bg-gray-50 dark:bg-surface-dark rounded-lg border border-border dark:border-border-dark overflow-hidden">
+                                    <div class="bg-background dark:bg-background-dark px-4 py-3 border-b border-border dark:border-border-dark flex justify-between items-center">
+                                        <span class="text-text-main dark:text-white font-bold text-sm flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary dark:text-primary-cyan text-[18px]">inventory_2</span>
+                                            초기 납품 항목 상세 (50%)
+                                        </span>
+                                    </div>
+                                    <div class="p-4">
+                                        <div id="delivery-items-preview" class="space-y-2">
+                                            <p class="text-text-sub/50 dark:text-text-secondary/50 text-xs text-center py-4 italic">주문 항목을 추가하면 초기 납품 수량이 표시됩니다</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- 주문 등록 버튼 -->
+                    <div class="flex flex-col sm:flex-row justify-end gap-4 pt-4 pb-12">
+                        <button id="submit-order-btn" class="px-8 py-3 rounded-lg bg-primary dark:bg-primary-cyan hover:bg-primary-dark dark:hover:bg-[#11a3d4] text-white dark:text-background-dark font-bold text-base shadow-lg shadow-primary/30 dark:shadow-primary-cyan/30 hover:shadow-xl transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined">send</span>
+                            주문 등록
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 작업 결과 알림 메시지 (Toast) -->
+            <div id="toast-notification" class="fixed bottom-6 right-6 z-50 slide-enter hidden">
+                <div id="toast-content" class="bg-surface dark:bg-surface-dark shadow-lg dark:shadow-[0_4px_20px_rgba(0,0,0,0.5)] rounded-lg p-4 flex items-center gap-4 min-w-[320px]">
+                    <div id="toast-icon" class="rounded-full p-2 flex items-center justify-center">
+                        <span id="toast-icon-symbol" class="material-symbols-outlined text-[20px]">check_circle</span>
+                    </div>
+                    <div class="flex flex-col flex-1">
+                        <h4 id="toast-title" class="text-text-main dark:text-white text-sm font-bold"></h4>
+                        <p id="toast-message" class="text-text-sub dark:text-text-secondary text-xs"></p>
+                    </div>
+                    <button id="toast-close-btn" class="ml-auto text-text-sub dark:text-text-secondary hover:text-text-main dark:hover:text-white transition-colors">
+                        <span class="material-symbols-outlined text-sm">close</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="js/utils.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/order.js"></script>
+</body>
+</html>
+

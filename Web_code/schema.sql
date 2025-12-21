@@ -49,7 +49,7 @@ CREATE TABLE Part (
 CREATE TABLE ShipProject (
     ProjectID INT PRIMARY KEY,
     ShipName VARCHAR(100) NOT NULL,
-    ShipType VARCHAR(50),
+    ShipType VARCHAR(50) CHECK (ShipType IN ('Bulk carrier', 'Containership', 'Tanker', 'Gas carrier', 'General cargo ship', 'Refrigerated cargo carrier', 'Ro-ro', 'Passenger ship', 'Offshore supply vessel')),
     ContractDate DATE,
     DeliveryDueDate DATE,
     Status VARCHAR(20) CHECK (Status IN ('설계', '건조중', '인도완료', '취소')),

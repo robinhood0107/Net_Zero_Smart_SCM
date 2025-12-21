@@ -1,793 +1,1787 @@
 # 2. 구현한 클래스 설명
 
-본 문서에서는 탄소중립 스마트 SCM 플랫폼 애플리케이션의 클래스 구조와 핵심 함수들에 대해 설명합니다.
+본 문서에서는 탄소중립 스마트 SCM 플랫폼 애플리케이션의 클래스 구조와 **모든 클래스 및 메서드**에 대해 상세히 설명합니다.
 
 ---
 
-## 2.1 클래스 다이어그램
+## 2.1 클래스 다이어그램 (Class Diagram)
+
+### 전체 아키텍처 (Layered Architecture)
+
+애플리케이션은 **Client** -> **Controller** -> **Service** -> **Repository** -> **Database** 순서의 계층적 구조를 가집니다.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              hw10 패키지 구조                                │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-                              ┌─────────────────┐
-                              │   Application   │ ◀── 프로그램 진입점
-                              │   (메인 클래스)  │
-                              └────────┬────────┘
-                                       │
-                    ┌──────────────────┼──────────────────┐
-                    ▼                  ▼                  ▼
-           ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
-           │ DatabaseConfig │ │DatabaseConnection│ │    Logger     │
-           │  (설정 로더)    │ │  (DB 연결)      │ │   (로그)       │
-           └────────────────┘ └────────┬────────┘ └────────────────┘
-                                       │
-                                       ▼
-                    (변경 가능) ┌────────────────┐
-                              │  ConsoleMenu   │ ◀── UI 레이어
-                              │  (메인 메뉴)    │     (웹/GUI로 교체 가능)
-                              └────────┬────────┘
-                                       │
-          ┌────────────────────────────┼────────────────────────────┐
-          ▼                            ▼                            ▼
-(변경 가능)                    (변경 가능)                   (변경 가능)
-┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│ ProjectDashboard │    │ OrderRegistration│    │  SupplierReport  │
-│   (기능 1 UI)     │    │   (기능 2 UI)     │    │   (기능 3 UI)     │
-└────────┬─────────┘    └────────┬─────────┘    └────────┬─────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│ProjectRepository │    │OrderTransaction- │    │SupplierRepository│
-│  (프로젝트 DAO)   │    │    Service       │    │ (공급업체 DAO)    │
-└──────────────────┘    │ (트랜잭션 서비스) │    └──────────────────┘
-                        └────────┬─────────┘
-                                 │
-         ┌───────────────────────┼───────────────────────┐
-         ▼                       ▼                       ▼
-┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│ OrderRepository  │    │DeliveryRepository│    │InventoryRepository│
-│  (발주 DAO)       │    │  (납품 DAO)       │    │   (재고 DAO)      │
-└──────────────────┘    └──────────────────┘    └──────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 ▼
-                        ┌──────────────────┐
-                        │SequenceGenerator │
-                        │   (PK 생성기)     │
-                        └──────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            유틸리티 클래스                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  ErrorHandler (예외→메시지 변환)  │  InputHelper (콘솔 입력 처리, 변경 가능) │
-└─────────────────────────────────────────────────────────────────────────────┘
+[ Client ]
+    │ (HTTP Request)
+    ▼
+[ Controller Layer ] ──────────────────────────┐
+│ MainController, ProjectController, etc.      │ ◀── API 엔드포인트
+└──────────────────────────────────────────────┘
+    │ (DTO)
+    ▼
+[ Service Layer ] ─────────────────────────────┐
+│ MainService, OrderService, ProjectService... │ ◀── 비즈니스 로직 & 트랜잭션
+└──────────────────────────────────────────────┘
+    │ (Domain Objects)
+    ▼
+[ Repository Layer ] ──────────────────────────┐ ──▶ [ SequenceGenerator ]
+│ ProjectRepository, OrderRepository...        │      (PK 생성)
+└──────────────────────────────────────────────┘
+    │ (JDBC / SQL)
+    ▼
+[ Database (PostgreSQL) ]
 ```
 
 ---
 
-## 2.2 패키지 구조
+## 2.2 패키지 및 클래스 상세 분석
 
-본 프로젝트는 다음과 같은 패키지 구조로 구성되어 있습니다.
+### 2.2.1 `hw10` 패키지 (메인)
 
-| 패키지 | 역할 | 변경 가능 여부 |
-|--------|------|---------------|
-| `hw10` | 메인 클래스 (Application) | 고정 |
-| `hw10.config` | DB 환경설정 로더 | 고정 |
-| `hw10.db` | DB 연결 관리 | 고정 |
-| `hw10.dao` | 데이터 접근 계층 (SQL 실행) | 고정 |
-| `hw10.service` | 비즈니스 로직 및 트랜잭션 | 고정 |
-| `hw10.ui` | 사용자 인터페이스 | **(변경 가능)** |
-| `hw10.util` | 유틸리티 클래스 | 부분 변경 가능 |
+#### 1. `Application` 클래스
 
----
+**파일:** `hw10/Application.java`  
+**패키지:** `hw10`  
+**어노테이션:** `@SpringBootApplication`  
+**역할:** Spring Boot 애플리케이션의 시작점(Entry Point)입니다. 애플리케이션 전체 생명주기를 관리합니다.
 
-## 2.3 클래스별 상세 설명
+##### 클래스 구조 및 의존성
 
-### 2.3.1 Application (메인 클래스)
+이 클래스는 Spring Boot의 자동 설정 기능을 활용하여 웹 애플리케이션을 구동합니다. `@SpringBootApplication` 어노테이션은 다음 세 가지 어노테이션을 포함합니다:
+- `@Configuration`: 스프링 설정 클래스로 인식
+- `@EnableAutoConfiguration`: 자동 설정 활성화
+- `@ComponentScan`: 컴포넌트 스캔 활성화
 
-**파일 위치:** `hw10/Application.java`
-
-Application 클래스는 프로그램의 진입점(Entry Point)으로서 `main()` 메서드를 포함합니다. 이 클래스는 애플리케이션의 생명주기를 관리하며, 로그 초기화, DB 연결, UI 실행을 담당합니다.
-
-#### 메서드 상세 설명
+##### 메서드 상세 설명
 
 **`public static void main(String[] args)`**
-
-main 메서드는 프로그램이 실행될 때 JVM에 의해 가장 먼저 호출되는 메서드입니다. 이 메서드는 프로그램의 전체 실행 흐름을 제어합니다.
-
-메서드가 시작되면 먼저 `Logger.init()`을 호출하여 로그 시스템을 초기화합니다. 이 과정에서 콘솔과 파일(logs/app.log)에 동시에 로그를 기록할 수 있도록 설정됩니다. 초기화가 완료되면 `Logger.info("애플리케이션 시작")`을 호출하여 프로그램 시작을 기록합니다. 이는 과제 요구사항에서 명시한 "애플리케이션 시작/종료 로그"를 충족합니다.
-
-다음으로 `DatabaseConfig.load()`를 호출하여 DB 접속 정보를 외부 설정에서 로드합니다. 로드된 설정으로 DatabaseConnection 객체를 생성하는데, 이때 try-with-resources 문법을 사용합니다. 이 문법은 Java 7에서 도입된 것으로, 블록이 종료될 때 자동으로 close() 메서드를 호출하여 리소스를 정리합니다.
-
-DB 연결이 성공하면 "DB 접속 성공" 로그를 기록하고, ConsoleMenu 객체를 생성하여 run() 메서드를 호출합니다. 이 시점부터 사용자와의 상호작용이 시작됩니다.
-
-예외가 발생하면 catch 블록에서 처리합니다. Logger.error()로 상세 오류 정보를 로그에 기록하고, 사용자에게는 간단한 오류 메시지만 출력합니다. 이는 과제 요구사항의 "사용자에게 이해 가능한 에러 메시지를 출력하고 개발용 상세 내용은 로그로 남기도록"하는 조건을 충족합니다.
-
-마지막으로 finally 블록에서 "애플리케이션 종료" 로그를 기록합니다. finally 블록은 예외 발생 여부와 관계없이 항상 실행되므로, 정상 종료든 비정상 종료든 로그가 남게 됩니다.
-
-#### 과제 요구사항 충족
-
-- **[기능 4]** 애플리케이션 시작/종료 로그를 기록합니다.
-- **[기능 4]** DB 접속 성공/실패 로그를 기록합니다.
-- **[기능 4]** 예외 발생 시 프로그램이 중단되지 않고 사용자에게 오류 메시지를 출력합니다.
+- **매개변수:** `String[] args` - 명령줄 인자 배열
+- **반환값:** 없음 (void)
+- **동작 방식:**
+  1. 프로그램 실행 시 가장 먼저 호출되는 진입점(Entry Point)입니다.
+  2. `Logger.init()` 메서드를 호출하여 로깅 시스템을 초기화합니다. 이는 모든 로그 기록이 정상적으로 작동하도록 보장합니다.
+  3. `Logger.info("애플리케이션 시작")`을 통해 애플리케이션 시작을 로그에 기록합니다.
+  4. `SpringApplication.run(Application.class, args)`를 호출하여:
+     - Spring IoC 컨테이너를 초기화하고 모든 빈(Bean)을 생성합니다.
+     - 내장 톰캣 서버를 시작하여 HTTP 요청을 수신할 준비를 합니다.
+     - 기본 포트는 8080입니다.
+  5. 서버 시작 완료 후 `Logger.info("서버 시작 완료: http://localhost:8080")` 메시지를 출력합니다.
+- **예외 처리:** Spring Boot가 내부적으로 예외를 처리하며, 초기화 실패 시 애플리케이션이 종료됩니다.
 
 ---
 
-### 2.3.2 DatabaseConfig (환경설정 로더)
+### 2.2.2 `hw10.config` 패키지 (설정)
 
-**파일 위치:** `hw10/config/DatabaseConfig.java`
+#### 1. `DatabaseConfig` 클래스
 
-DatabaseConfig 클래스는 DB 접속 정보를 외부에서 로드하는 역할을 담당합니다. 과제 요구사항에 따라 DB 접속 정보를 코드에 하드코딩하지 않고, 환경변수 또는 설정 파일에서 읽어옵니다.
+**파일:** `hw10/config/DatabaseConfig.java`  
+**패키지:** `hw10.config`  
+**접근 제어자:** `public final class` (불변 클래스)  
+**역할:** 데이터베이스 연결 정보를 다양한 소스로부터 로드하고 관리하는 설정 클래스입니다. 환경변수, 설정 파일 등 여러 소스를 우선순위에 따라 확인합니다.
 
-#### 필드 설명
+##### 클래스 구조 및 필드
 
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `dbUrl` | String | JDBC 연결 URL (예: jdbc:postgresql://localhost:5432/scm_db) |
-| `dbUser` | String | DB 접속 계정명 |
-| `dbPassword` | String | DB 접속 비밀번호 |
+```java
+public final String dbUrl;      // 데이터베이스 연결 URL
+public final String dbUser;     // 데이터베이스 사용자명
+public final String dbPassword; // 데이터베이스 비밀번호
+```
 
-세 필드 모두 `public final`로 선언되어 있어 외부에서 읽을 수 있지만 변경할 수 없습니다.
+모든 필드는 `final`로 선언되어 불변성을 보장합니다. 생성자에서 한 번 설정되면 변경할 수 없습니다.
 
-#### 메서드 상세 설명
+##### 생성자 상세 설명
 
 **`private DatabaseConfig(String dbUrl, String dbUser, String dbPassword)`**
+- **접근 제어자:** `private` (외부에서 직접 인스턴스화 불가, `load()` 메서드를 통해서만 생성)
+- **매개변수:**
+  - `String dbUrl`: PostgreSQL 연결 URL (예: `jdbc:postgresql://localhost:5432/scmdb`)
+  - `String dbUser`: 데이터베이스 사용자명
+  - `String dbPassword`: 데이터베이스 비밀번호
+- **동작 방식:**
+  - 세 개의 매개변수를 받아 각각의 `final` 필드에 할당합니다.
+  - 불변 객체 패턴을 사용하여 설정 값이 런타임에 변경되지 않도록 보장합니다.
+- **반환값:** 없음 (생성자)
 
-생성자는 private으로 선언되어 외부에서 직접 인스턴스를 생성할 수 없습니다. 대신 load() 정적 메서드를 통해서만 객체를 생성할 수 있습니다. 이러한 패턴을 정적 팩토리 메서드 패턴이라고 합니다. 생성자는 전달받은 세 개의 파라미터를 각각 필드에 저장합니다.
+##### 메서드 상세 설명
 
 **`public static DatabaseConfig load()`**
+- **접근 제어자:** `public static`
+- **매개변수:** 없음
+- **반환값:** `DatabaseConfig` 객체 (설정이 없으면 모든 필드가 null인 객체)
+- **동작 방식:**
+  이 메서드는 다음 우선순위에 따라 데이터베이스 설정을 로드합니다:
+  
+  **1순위: 시스템 환경변수**
+  - `System.getenv("DB_URL")`, `System.getenv("DB_USER")`, `System.getenv("DB_PASSWORD")`를 확인합니다.
+  - 모든 값이 존재하면 즉시 `DatabaseConfig` 객체를 생성하여 반환합니다.
+  - 환경변수는 운영 환경에서 보안상 가장 안전한 방법입니다.
+  
+  **2순위: application.properties (클래스패스)**
+  - `loadPropertiesFromClasspath("application.properties")`를 호출합니다.
+  - Spring Boot 표준 설정 파일 형식을 따릅니다.
+  - `spring.datasource.url`, `spring.datasource.username`, `spring.datasource.password` 키를 읽습니다.
+  - 모든 값이 존재하면 `DatabaseConfig` 객체를 생성하여 반환합니다.
+  
+  **3순위: config.properties (클래스패스)**
+  - `loadPropertiesFromClasspath("config.properties")`를 호출합니다.
+  - 레거시 설정 파일 형식을 지원합니다.
+  - `db.url`, `db.user`, `db.password` 키를 읽습니다.
+  
+  **4순위: config.properties (현재 디렉토리)**
+  - `FileInputStream`을 사용하여 현재 작업 디렉토리의 `config.properties` 파일을 직접 읽습니다.
+  - 파일이 없거나 읽기 실패 시 예외를 무시하고 다음 단계로 진행합니다.
+  - `Logger.warn()`을 통해 경고 메시지를 기록합니다.
+  
+  **최종 단계:**
+  - 모든 소스에서 설정을 찾지 못한 경우, 모든 필드가 `null`인 `DatabaseConfig` 객체를 반환합니다.
+  - 이 경우 `DatabaseConnection` 생성자에서 `IllegalStateException`이 발생합니다.
 
-load 메서드는 설정을 로드하여 DatabaseConfig 객체를 반환하는 정적 메서드입니다. 두 단계의 우선순위로 설정을 로드합니다.
-
-첫 번째 단계에서는 System.getenv()를 사용하여 운영체제의 환경변수를 확인합니다. DB_URL, DB_USER, DB_PASSWORD 세 환경변수가 모두 설정되어 있으면 해당 값으로 DatabaseConfig 객체를 생성하여 반환합니다. 환경변수는 운영 환경에서 민감한 정보를 관리할 때 주로 사용됩니다.
-
-첫 번째 단계에서 설정을 찾지 못하면 두 번째 단계로 config.properties 파일을 읽습니다. Java의 Properties 클래스를 사용하여 key=value 형태의 설정 파일을 파싱합니다. FileInputStream으로 파일을 열고 Properties.load()로 내용을 읽어옵니다. db.url, db.user, db.password 세 키에서 값을 가져와 유효성을 검증한 후 DatabaseConfig 객체를 생성합니다.
-
-파일이 없거나 읽기에 실패하면 Logger.warn()으로 경고 로그를 남깁니다. 두 단계 모두에서 설정을 찾지 못하면 모든 필드가 null인 객체를 반환하며, 이 경우 DatabaseConnection 생성 시점에서 IllegalStateException이 발생합니다.
+**`private static Properties loadPropertiesFromClasspath(String filename)`**
+- **접근 제어자:** `private static`
+- **매개변수:** `String filename` - 클래스패스에서 찾을 파일명
+- **반환값:** `Properties` 객체 (파일이 없거나 읽기 실패 시 `null`)
+- **동작 방식:**
+  1. `DatabaseConfig.class.getClassLoader().getResourceAsStream(filename)`을 사용하여 클래스패스에서 리소스를 스트림으로 읽습니다.
+  2. `try-with-resources` 구문을 사용하여 자동으로 스트림을 닫습니다.
+  3. `Properties.load(InputStream)`을 호출하여 키-값 쌍을 파싱합니다.
+  4. 파일이 없거나 예외가 발생하면 `null`을 반환합니다 (정상적인 동작).
+- **예외 처리:** 모든 예외를 내부에서 처리하고 `null`을 반환하여 상위 메서드가 다음 소스를 시도할 수 있도록 합니다.
 
 **`private static boolean notBlank(String s)`**
-
-문자열이 null이 아니고 비어있지 않은지 확인하는 헬퍼 메서드입니다. s가 null이면 false를 반환하고, trim()을 호출하여 앞뒤 공백을 제거한 후 isEmpty()로 빈 문자열인지 확인합니다.
-
-#### 과제 요구사항 충족
-
-- **[기능 4]** DB 접속 정보(host, port, user, password, dbname)를 코드에 하드코딩하지 않습니다.
-- **[기능 4]** 설정 파일 및 환경 변수로 분리하여 관리합니다.
+- **접근 제어자:** `private static`
+- **매개변수:** `String s` - 검증할 문자열
+- **반환값:** `boolean` - 문자열이 null이 아니고 공백이 아닌 경우 `true`
+- **동작 방식:**
+  1. `s == null`이면 `false`를 반환합니다.
+  2. `s.trim().isEmpty()`가 `true`이면 (공백만 있는 경우) `false`를 반환합니다.
+  3. 그 외의 경우 `true`를 반환합니다.
+- **용도:** 설정 값의 유효성을 검사하는 헬퍼 메서드입니다.
 
 ---
 
-### 2.3.3 DatabaseConnection (DB 연결 관리)
+### 2.2.3 `hw10.db` 패키지 (DB 연결)
 
-**파일 위치:** `hw10/db/DatabaseConnection.java`
+#### 1. `DatabaseConnection` 클래스
 
-DatabaseConnection 클래스는 JDBC를 사용하여 PostgreSQL 데이터베이스와의 연결을 관리합니다. AutoCloseable 인터페이스를 구현하여 try-with-resources 문법을 지원합니다.
+**파일:** `hw10/db/DatabaseConnection.java`  
+**패키지:** `hw10.db`  
+**접근 제어자:** `public final class`  
+**구현 인터페이스:** `AutoCloseable`  
+**역할:** JDBC 연결 객체(`java.sql.Connection`)를 생성하고 관리하는 래퍼 클래스입니다. `AutoCloseable` 인터페이스를 구현하여 `try-with-resources` 구문과 함께 사용할 수 있습니다.
 
-#### 필드 설명
+##### 클래스 구조 및 필드
 
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `config` | DatabaseConfig | DB 접속 설정 정보를 담고 있는 객체 |
+```java
+private final DatabaseConfig config;  // 데이터베이스 설정 정보
+```
 
-#### 메서드 상세 설명
+`config` 필드는 `final`로 선언되어 생성 후 변경할 수 없습니다.
+
+##### 생성자 상세 설명
 
 **`public DatabaseConnection(DatabaseConfig config)`**
+- **매개변수:** `DatabaseConfig config` - 데이터베이스 연결 설정 객체
+- **동작 방식:**
+  1. 전달받은 `config` 객체를 필드에 저장합니다.
+  2. 필수 설정 값 검증을 수행합니다:
+     - `config.dbUrl == null`이면 `IllegalStateException` 발생
+     - `config.dbUser == null`이면 `IllegalStateException` 발생
+     - `config.dbPassword == null`이면 `IllegalStateException` 발생
+  3. 예외 메시지: `"DB 설정이 비어 있습니다. 환경변수 또는 config.properties를 설정하세요."`
+- **예외:** `IllegalStateException` - 필수 설정이 누락된 경우
 
-생성자는 DatabaseConfig 객체를 받아 저장하고, 설정값의 유효성을 검증합니다. dbUrl, dbUser, dbPassword 중 하나라도 null이면 IllegalStateException을 발생시킵니다. 이 예외는 "DB 설정이 비어 있습니다. 환경변수 또는 config.properties를 설정하세요."라는 메시지를 포함하여, 사용자가 문제의 원인을 파악할 수 있도록 합니다.
+##### 메서드 상세 설명
 
 **`public Connection openConnection() throws SQLException`**
-
-새로운 JDBC Connection 객체를 생성하여 반환하는 메서드입니다. 내부적으로 DriverManager.getConnection(url, user, password)를 호출하여 PostgreSQL 데이터베이스에 실제로 연결합니다.
-
-이 메서드는 호출될 때마다 새로운 Connection을 생성합니다. Connection은 호출자가 직접 관리해야 하며, 사용이 끝나면 반드시 close()를 호출해야 합니다. 일반적으로 try-with-resources 문법을 사용하여 자동으로 닫히도록 합니다.
-
-연결에 실패하면 SQLException이 발생합니다. 네트워크 문제, 잘못된 인증 정보, DB 서버 다운 등 다양한 원인이 있을 수 있습니다.
+- **매개변수:** 없음
+- **반환값:** `java.sql.Connection` - 데이터베이스 연결 객체
+- **동작 방식:**
+  1. `DriverManager.getConnection()` 정적 메서드를 호출합니다.
+  2. 매개변수로 `config.dbUrl`, `config.dbUser`, `config.dbPassword`를 전달합니다.
+  3. PostgreSQL JDBC 드라이버가 자동으로 로드되어 물리적 데이터베이스 연결을 생성합니다.
+  4. 연결 성공 시 `Connection` 객체를 반환합니다.
+- **예외:** `SQLException` - 연결 실패 시 (예: DB 서버 다운, 잘못된 인증 정보, 네트워크 오류)
+- **사용 예시:**
+```java
+try (DatabaseConnection dbConn = new DatabaseConnection(config);
+     Connection conn = dbConn.openConnection()) {
+    // DB 작업 수행
+}
+```
 
 **`public void close()`**
-
-AutoCloseable 인터페이스를 구현하기 위한 메서드입니다. DatabaseConnection 자체는 Connection 풀링을 구현하지 않고 단순히 Connection 팩토리 역할만 수행하므로, 이 메서드는 비어있습니다. 실제 Connection의 닫기는 각 호출자가 책임집니다.
-
----
-
-### 2.3.4 Logger (로그 유틸리티)
-
-**파일 위치:** `hw10/util/Logger.java`
-
-Logger 클래스는 과제 요구사항에 명시된 로깅 기능을 구현합니다. java.util.logging 패키지를 사용하여 콘솔과 파일(logs/app.log)에 동시에 로그를 기록합니다.
-
-#### 필드 설명
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `LOGGER` | java.util.logging.Logger | Java 표준 로거 객체 (이름: "scm") |
-| `initialized` | boolean | 초기화 완료 플래그 (중복 초기화 방지) |
-
-#### 메서드 상세 설명
-
-**`public static void init()`**
-
-로그 시스템을 초기화하는 메서드입니다. 프로그램 시작 시 한 번만 호출해야 합니다.
-
-먼저 initialized 플래그를 확인하여 이미 초기화되었으면 바로 리턴합니다. 초기화 과정에서는 setUseParentHandlers(false)를 호출하여 Java 기본 로거의 핸들러를 비활성화합니다. 이렇게 하지 않으면 로그가 중복으로 출력될 수 있습니다.
-
-다음으로 두 개의 핸들러를 추가합니다. ConsoleHandler는 표준 출력(콘솔)에 로그를 출력합니다. SimpleFormatter를 사용하여 간단한 형태로 포맷팅합니다.
-
-FileHandler는 logs/app.log 파일에 로그를 기록합니다. 핸들러 생성 전에 Files.createDirectories()를 호출하여 logs 디렉토리가 없으면 생성합니다. FileHandler의 두 번째 파라미터 true는 append 모드를 의미하며, 기존 로그 파일 끝에 이어서 기록합니다. 파일 핸들러 생성에 실패해도 프로그램은 계속 실행되며, 콘솔 로그만 사용됩니다.
-
-**`public static void info(String msg)`**
-
-INFO 레벨의 일반 정보 로그를 기록합니다. 애플리케이션 시작/종료, DB 접속 성공, 트랜잭션 커밋 등 정상적인 동작을 기록할 때 사용합니다.
-
-**`public static void warn(String msg)`**
-
-WARNING 레벨의 경고 로그를 기록합니다. 설정 파일 로드 실패 등 프로그램 실행에는 지장이 없지만 주의가 필요한 상황에서 사용합니다.
-
-**`public static void error(String msg, Throwable t)`**
-
-SEVERE 레벨의 심각한 오류 로그를 기록합니다. 메시지와 함께 예외 객체(Throwable)를 받아 스택트레이스를 함께 기록합니다. 이를 통해 개발자는 오류 발생 위치와 원인을 상세히 파악할 수 있습니다.
-
-#### 과제 요구사항 충족
-
-- **[기능 4]** 애플리케이션 시작/종료, DB 접속 성공/실패, 트랜잭션 시작/커밋/롤백, 주요 오류를 기록합니다.
-- **[기능 4]** 콘솔 로그와 파일 로그를 모두 지원합니다.
+- **매개변수:** 없음
+- **반환값:** 없음 (void)
+- **동작 방식:**
+  - 현재는 빈 메서드로 구현되어 있습니다.
+  - 실제 `Connection` 객체의 종료는 호출부에서 `Connection.close()`를 직접 호출하여 관리합니다.
+  - `AutoCloseable` 인터페이스 구현 요구사항을 충족하기 위해 존재합니다.
+- **참고:** 향후 연결 풀링(Connection Pooling) 기능을 추가할 경우 이 메서드에서 연결을 풀에 반환하는 로직을 구현할 수 있습니다.
 
 ---
 
-### 2.3.5 ErrorHandler (예외 처리)
+### 2.2.4 `hw10.controller` 패키지 (API 컨트롤러)
 
-**파일 위치:** `hw10/util/ErrorHandler.java`
+REST API 요청을 받아 Service를 호출하고 응답을 반환합니다.
 
-ErrorHandler 클래스는 SQLException을 사용자가 이해할 수 있는 메시지로 변환하는 역할을 담당합니다. PostgreSQL의 SQLSTATE 코드를 분석하여 적절한 한국어 메시지를 반환합니다.
+#### 1. `MainController` 클래스
 
-#### 메서드 상세 설명
+**파일:** `hw10/controller/MainController.java`  
+**패키지:** `hw10.controller`  
+**어노테이션:** `@RestController`, `@RequestMapping("/api/main")`  
+**역할:** 메인 대시보드 관련 REST API 요청을 처리하는 컨트롤러입니다. HTTP 요청을 받아 Service 계층을 호출하고 결과를 JSON으로 반환합니다.
 
-**`public static String toUserMessage(SQLException e)`**
+##### 클래스 구조 및 의존성
 
-SQLException 객체를 받아 사용자 친화적인 메시지로 변환하는 메서드입니다.
+```java
+private final MainService mainService;  // 메인 서비스 의존성
+```
 
-먼저 e.getSQLState()를 호출하여 SQLSTATE 코드를 추출합니다. SQLSTATE는 SQL 표준에서 정의한 5자리 에러 코드로, PostgreSQL은 이를 확장하여 사용합니다. 코드가 null이면 "DB 오류가 발생했습니다."라는 일반적인 메시지를 반환합니다.
+Spring의 의존성 주입(Dependency Injection)을 통해 `MainService` 인스턴스를 주입받습니다.
 
-SQLSTATE 코드가 있으면 switch expression을 사용하여 코드별로 다른 메시지를 반환합니다.
+##### 생성자 상세 설명
 
-| SQLSTATE | 의미 | 반환 메시지 |
-|----------|------|------------|
-| 23503 | foreign_key_violation | "외래키 제약조건 위반입니다. (예: 존재하지 않는 ProjectID/SupplierID/PartID/WarehouseID)" |
-| 23505 | unique_violation | "중복 데이터(UNIQUE 제약조건 위반)입니다." |
-| 23514 | check_violation | "값 범위/상태 값(CHECK 제약조건)을 위반했습니다." |
-| 40P01 | deadlock_detected | "DB 교착상태로 트랜잭션이 실패했습니다. 잠시 후 다시 시도하세요." |
-| 40001 | serialization_failure | "트랜잭션 충돌로 실패했습니다. 다시 시도하세요." |
-| 기타 | - | "DB 처리 중 오류가 발생했습니다. (SQLSTATE=코드)" |
+**`public MainController(MainService mainService)`**
+- **매개변수:** `MainService mainService` - 메인 서비스 인스턴스
+- **동작 방식:**
+  - Spring Framework가 생성자 기반 의존성 주입을 수행합니다.
+  - `mainService` 필드에 주입된 인스턴스를 저장합니다.
+- **의존성 주입 방식:** 생성자 주입(Constructor Injection)을 사용하여 불변성을 보장하고 테스트 용이성을 높입니다.
 
-switch expression은 Java 14에서 도입된 문법으로, 화살표(->)를 사용하면 break 문이 필요 없고, 표현식으로 값을 직접 반환할 수 있습니다.
+##### 메서드 상세 설명
 
-#### 과제 요구사항 충족
+**`@GetMapping("/summary") public ResponseEntity<MainDto.MainSummary> getSummary() throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/main/summary`
+- **매개변수:** 없음
+- **반환값:** `ResponseEntity<MainDto.MainSummary>` - HTTP 상태 코드와 함께 요약 데이터를 포함한 응답
+- **동작 방식:**
+  1. 클라이언트로부터 GET 요청을 받습니다.
+  2. `mainService.getSummary()`를 호출하여 대시보드 요약 정보를 조회합니다.
+  3. 조회된 `MainDto.MainSummary` 객체를 `ResponseEntity.ok()`로 래핑하여 반환합니다.
+  4. HTTP 상태 코드 200 (OK)와 함께 JSON 형식으로 응답합니다.
+- **응답 데이터 구조:**
+  - `activeProjects`: 활성 프로젝트 수 (int)
+  - `carbonReduction`: 탄소 감축량 (double, kg CO₂e)
+  - `delayedDeliveries`: 지연 배송 건수 (int)
+  - `avgEsgGrade`: 평균 ESG 등급 (String, "A", "B", "C", "D" 중 하나)
+- **예외 처리:** `SQLException`이 발생하면 `GlobalExceptionHandler`가 처리하여 500 에러를 반환합니다.
 
-- **[기능 4]** 사용자에게 이해 가능한 에러 메시지를 출력합니다.
-- **[기능 4]** 개발용 상세 내용은 로그로 남기도록 합니다.
+#### 2. `ProjectController` 클래스
+
+**파일:** `hw10/controller/ProjectController.java`  
+**패키지:** `hw10.controller`  
+**어노테이션:** `@RestController`, `@RequestMapping("/api/projects")`  
+**역할:** 프로젝트 관련 REST API 요청을 처리하는 컨트롤러입니다. 프로젝트 조회, 검색, 통계 조회 기능을 제공합니다.
+
+##### 클래스 구조 및 의존성
+
+```java
+private final ProjectService projectService;  // 프로젝트 서비스 의존성
+```
+
+##### 생성자 상세 설명
+
+**`public ProjectController(ProjectService projectService)`**
+- **매개변수:** `ProjectService projectService` - 프로젝트 서비스 인스턴스
+- **동작 방식:** 생성자 기반 의존성 주입을 통해 `projectService` 필드를 초기화합니다.
+
+##### 메서드 상세 설명
+
+**`@GetMapping("/{id}") public ResponseEntity<ProjectDto.ProjectBasic> getProject(@PathVariable int id) throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/projects/{id}` (예: `/api/projects/1`)
+- **매개변수:**
+  - `@PathVariable int id` - 프로젝트 ID (URL 경로에서 추출)
+- **반환값:** `ResponseEntity<ProjectDto.ProjectBasic>` - 프로젝트 기본 정보 또는 404 응답
+- **동작 방식:**
+  1. URL 경로에서 프로젝트 ID를 추출합니다.
+  2. `projectService.getProject(id)`를 호출하여 프로젝트 정보를 조회합니다.
+  3. 조회 결과가 `null`이면 `ResponseEntity.notFound().build()`를 반환하여 HTTP 404 상태 코드를 전송합니다.
+  4. 조회 결과가 있으면 `ResponseEntity.ok(project)`를 반환하여 HTTP 200과 함께 JSON 데이터를 전송합니다.
+- **응답 데이터 구조 (ProjectDto.ProjectBasic):**
+  - `projectId`: 프로젝트 ID (int)
+  - `shipName`: 선박명 (String)
+  - `shipType`: 선종 (String)
+  - `contractDate`: 계약일 (java.sql.Date)
+  - `deliveryDueDate`: 인도예정일 (java.sql.Date)
+  - `status`: 프로젝트 상태 (String)
+
+**`@GetMapping("/search") public ResponseEntity<List<ProjectDto.ProjectSearchItem>> searchProjects(@RequestParam String keyword, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int limit) throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/projects/search?keyword=검색어&page=0&limit=10`
+- **매개변수:**
+  - `@RequestParam String keyword` - 선박명 검색어 (필수)
+  - `@RequestParam(defaultValue = "0") int page` - 페이지 번호 (기본값: 0, 0부터 시작)
+  - `@RequestParam(defaultValue = "10") int limit` - 페이지당 항목 수 (기본값: 10)
+- **반환값:** `ResponseEntity<List<ProjectDto.ProjectSearchItem>>` - 검색 결과 리스트
+- **동작 방식:**
+  1. 쿼리 파라미터에서 검색어, 페이지 번호, 페이지 크기를 추출합니다.
+  2. `projectService.searchProjects(keyword, page, limit)`를 호출합니다.
+  3. 서비스 계층에서 페이징 처리를 수행합니다 (`offset = page * limit`).
+  4. 검색 결과 리스트를 JSON 배열로 반환합니다.
+- **페이징 처리:**
+  - `offset = page * limit`로 계산됩니다.
+  - 예: `page=0, limit=10` → `offset=0` (첫 10개)
+  - 예: `page=1, limit=10` → `offset=10` (다음 10개)
+- **응답 데이터 구조:** `ProjectDto.ProjectSearchItem` 리스트
+  - 각 항목: `projectId`, `shipName`, `shipType`, `status`
+
+**`@GetMapping("/{id}/stats") public ResponseEntity<ProjectDto.DashboardStats> getDashboardStats(@PathVariable int id) throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/projects/{id}/stats` (예: `/api/projects/1/stats`)
+- **매개변수:**
+  - `@PathVariable int id` - 프로젝트 ID
+- **반환값:** `ResponseEntity<ProjectDto.DashboardStats>` - 대시보드 통계 데이터
+- **동작 방식:**
+  1. [기능 1] 프로젝트 대시보드 통계 조회 기능을 구현합니다.
+  2. `projectService.getDashboardStats(id)`를 호출합니다.
+  3. 서비스 계층에서 다음 데이터를 집계합니다:
+     - 총 발주 금액 (발주서 + 발주 항목 조인)
+     - 운송 관련 탄소 배출 합계
+     - 보관 관련 탄소 배출 합계
+     - 가공/생산 관련 탄소 배출 합계
+     - 프로젝트 전체 탄소 배출 합계
+     - 공급업체별 발주 금액 상위 3개
+     - 탄소 집약도 (kg CO₂e / 백만 원)
+  4. 모든 통계 데이터를 포함한 `DashboardStats` 객체를 반환합니다.
+- **응답 데이터 구조 (ProjectDto.DashboardStats):**
+  - `project`: 프로젝트 기본 정보 (`ProjectBasic`)
+  - `totalOrderAmount`: 총 발주 금액 (double)
+  - `totalEmission`: 전체 탄소 배출량 (double, kg CO₂e)
+  - `transportEmission`: 운송 탄소 배출량 (double)
+  - `storageEmission`: 보관 탄소 배출량 (double)
+  - `processingEmission`: 가공/생산 탄소 배출량 (double)
+  - `topSuppliers`: 상위 3개 공급업체 리스트 (`List<SupplierAmount>`)
+  - `carbonIntensity`: 탄소 집약도 (Double, null 가능)
+  - `shipCII`: 선박 CII 지표 (Double, 현재 null)
+
+#### 3. `OrderController` 클래스
+
+**파일:** `hw10/controller/OrderController.java`  
+**패키지:** `hw10.controller`  
+**어노테이션:** `@RestController`, `@RequestMapping("/api/orders")`  
+**역할:** 발주 관련 REST API 요청을 처리하는 컨트롤러입니다. 발주 생성, 프로젝트/공급사/부품/창고 목록 조회 기능을 제공합니다.
+
+##### 클래스 구조 및 의존성
+
+```java
+private final OrderService orderService;  // 발주 서비스 의존성
+```
+
+##### 생성자 상세 설명
+
+**`public OrderController(OrderService orderService)`**
+- **매개변수:** `OrderService orderService` - 발주 서비스 인스턴스
+- **동작 방식:** 생성자 기반 의존성 주입을 통해 `orderService` 필드를 초기화합니다.
+
+##### 메서드 상세 설명
+
+**`@PostMapping public ResponseEntity<OrderDto.OrderResponse> createOrder(@RequestBody OrderDto.OrderRequest request) throws SQLException`**
+- **HTTP 메서드:** `POST`
+- **엔드포인트:** `/api/orders`
+- **매개변수:**
+  - `@RequestBody OrderDto.OrderRequest request` - 발주 요청 데이터 (JSON 본문에서 역직렬화)
+- **반환값:** `ResponseEntity<OrderDto.OrderResponse>` - 발주 생성 결과
+- **동작 방식:**
+  1. [기능 2] 발주 등록 트랜잭션 처리 기능을 구현합니다.
+  2. 클라이언트로부터 JSON 형식의 발주 요청 데이터를 받습니다.
+  3. `orderService.createOrder(request)`를 호출하여 트랜잭션을 실행합니다.
+  4. 성공 시 생성된 `POID`와 `DeliveryID`를 포함한 응답을 반환합니다.
+  5. 실패 시 `SQLException`이 발생하며, `GlobalExceptionHandler`가 500 에러를 반환합니다.
+- **요청 데이터 구조 (OrderDto.OrderRequest):**
+  - `projectId`: 프로젝트 ID (int)
+  - `supplierId`: 공급업체 ID (int)
+  - `engineerName`: 담당 엔지니어 이름 (String)
+  - `status`: 발주 상태 (String, 기본값: "요청")
+  - `lines`: 발주 품목 리스트 (`List<OrderLineInput>`)
+    - 각 품목: `partId`, `quantity`, `unitPrice`
+  - `warehouseId`: 입고 창고 ID (int)
+  - `transportMode`: 운송 수단 (String)
+  - `distanceKm`: 운송 거리 (Double, km)
+- **응답 데이터 구조 (OrderDto.OrderResponse):**
+  - `poid`: 생성된 발주서 ID (int)
+  - `deliveryId`: 생성된 납품서 ID (int)
+  - `message`: 결과 메시지 (String, "발주 등록 완료")
+- **예외 처리:** `SQLException` 발생 시 "발주 등록 실패: [에러 메시지]" 형태로 래핑하여 상위로 전달합니다.
+
+**`@GetMapping("/projects") public ResponseEntity<List<ProjectDto.ProjectSearchItem>> getProjectList(@RequestParam(defaultValue = "") String keyword) throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/orders/projects?keyword=검색어`
+- **매개변수:**
+  - `@RequestParam(defaultValue = "") String keyword` - 검색어 (기본값: 빈 문자열)
+- **반환값:** `ResponseEntity<List<ProjectDto.ProjectSearchItem>>` - 프로젝트 목록
+- **동작 방식:**
+  1. 드롭다운 메뉴 구성용 프로젝트 목록을 조회합니다.
+  2. `orderService.getProjectOptions(keyword)`를 호출합니다.
+  3. 키워드가 없으면 전체 조회 (최대 20개), 있으면 검색 결과를 반환합니다.
+- **용도:** 발주 등록 화면에서 프로젝트 선택 드롭다운을 채우는 데 사용됩니다.
+
+**`@GetMapping("/suppliers") public ResponseEntity<List<OrderDto.SupplierOption>> getSupplierList() throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/orders/suppliers`
+- **매개변수:** 없음
+- **반환값:** `ResponseEntity<List<OrderDto.SupplierOption>>` - 공급업체 목록
+- **동작 방식:**
+  1. 모든 공급업체를 이름 순으로 정렬하여 조회합니다.
+  2. `orderService.getSupplierOptions()`를 호출합니다.
+  3. 각 공급업체의 ID, 이름, 국가 정보를 반환합니다.
+- **응답 데이터 구조:** `OrderDto.SupplierOption` 리스트
+  - 각 항목: `supplierId`, `name`, `country`
+
+**`@GetMapping("/parts") public ResponseEntity<List<OrderDto.PartOption>> searchParts(@RequestParam(defaultValue = "") String keyword) throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/orders/parts?keyword=검색어`
+- **매개변수:**
+  - `@RequestParam(defaultValue = "") String keyword` - 부품명 검색어
+- **반환값:** `ResponseEntity<List<OrderDto.PartOption>>` - 부품 목록
+- **동작 방식:**
+  1. 부품 검색 기능을 제공합니다.
+  2. `orderService.searchParts(keyword)`를 호출합니다.
+  3. 키워드가 없으면 상위 50개 부품을 반환합니다.
+  4. 키워드가 있으면 `ILIKE` 연산자를 사용하여 부분 일치 검색을 수행하고 상위 20개를 반환합니다.
+  5. 각 부품의 평균 단가(`AVG(SupplierPart.UnitPrice)`)를 함께 조회합니다.
+- **응답 데이터 구조:** `OrderDto.PartOption` 리스트
+  - 각 항목: `partId`, `name`, `unit`, `unitPrice`
+
+**`@GetMapping("/warehouses") public ResponseEntity<List<OrderDto.WarehouseOption>> getWarehouseList() throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/orders/warehouses`
+- **매개변수:** 없음
+- **반환값:** `ResponseEntity<List<OrderDto.WarehouseOption>>` - 창고 목록
+- **동작 방식:**
+  1. 모든 창고를 이름 순으로 정렬하여 조회합니다.
+  2. `orderService.getWarehouseOptions()`를 호출합니다.
+  3. 각 창고의 ID, 이름, 위치 정보를 반환합니다.
+- **응답 데이터 구조:** `OrderDto.WarehouseOption` 리스트
+  - 각 항목: `warehouseId`, `name`, `location`
+
+**`@GetMapping("/warehouses/{warehouseId}/inventory") public ResponseEntity<List<OrderDto.InventoryItem>> getWarehouseInventory(@PathVariable int warehouseId) throws SQLException`**
+- **HTTP 메서드:** `GET`
+- **엔드포인트:** `/api/orders/warehouses/{warehouseId}/inventory`
+- **매개변수:**
+  - `@PathVariable int warehouseId` - 창고 ID
+- **반환값:** `ResponseEntity<List<OrderDto.InventoryItem>>` - 재고 목록
+- **동작 방식:**
+  1. 특정 창고의 현재 재고 현황을 조회합니다.
+  2. `orderService.getWarehouseInventory(warehouseId)`를 호출합니다.
+  3. `Inventory` 테이블과 `Part` 테이블을 조인하여 부품명과 단위 정보를 함께 조회합니다.
+  4. 부품명 순으로 정렬하여 반환합니다.
+- **응답 데이터 구조:** `OrderDto.InventoryItem` 리스트
+  - 각 항목: `partId`, `partName`, `unit`, `quantity`
+- **용도:** 발주 등록 시 선택한 창고의 현재 재고를 확인하는 데 사용됩니다.
+
+#### 4. `SupplierController` 클래스
+
+**파일:** `hw10/controller/SupplierController.java`
+
+- **`listSuppliers(esgGrades, minRatio, maxRatio)`** (`GET /api/suppliers`)
+  - [기능 3] ESG 등급 다중 선택 및 지연율 필터를 적용하여 공급업체 리포트 목록을 조회합니다.
+- **`getSupplier(id)`**
+  - 특정 공급업체의 상세 정보를 조회합니다.
+- **`getSupplierOrders(id, page, size)`**
+  - 특정 업체의 발주 이력을 페이징하여 조회합니다.
+
+#### 5. `SettingController` 클래스
+
+**파일:** `hw10/controller/SettingController.java`
+
+- **`getLogs(level, limit, search)`** (`GET /api/settings/logs`)
+  - 서버 로그 파일을 읽어 조건에 맞게 필터링하여 반환합니다.
+- **`getSystemStatus()`** (`GET /api/settings/status`)
+  - DB 연결 상태, 응답 속도 등 시스템 상태를 점검합니다.
 
 ---
 
-### 2.3.6 ProjectRepository (프로젝트 DAO)
+### 2.2.5 `hw10.service` 패키지 (비즈니스 로직)
 
-**파일 위치:** `hw10/dao/ProjectRepository.java`
+트랜잭션 관리와 비즈니스 규칙을 수행합니다.
 
-ProjectRepository 클래스는 기능 1(프로젝트 대시보드)에서 필요한 모든 데이터 조회 SQL을 담당합니다. 집계 함수, GROUP BY, JOIN 등 과제에서 요구하는 SQL 기능을 활용합니다.
+#### 1. `MainService` 클래스
 
-#### 내부 record 정의
+**파일:** `hw10/service/MainService.java`  
+**패키지:** `hw10.service`  
+**어노테이션:** `@Service`  
+**역할:** 메인 대시보드의 비즈니스 로직을 처리하는 서비스 클래스입니다. 데이터베이스에서 통계 데이터를 조회하고 계산합니다.
 
-| record | 필드 | 설명 |
-|--------|------|------|
-| `ProjectBasic` | projectId, shipName, shipType, contractDate, deliveryDueDate, status | 프로젝트 기본 정보 |
-| `SupplierAmount` | supplierId, name, amount | 공급업체별 발주 금액 |
-| `ProjectSearchItem` | projectId, shipName, shipType, status | 프로젝트 검색 결과 항목 |
+##### 클래스 구조 및 의존성
 
-record는 Java 16에서 도입된 불변 데이터 클래스로, 필드 선언만으로 생성자, getter, equals(), hashCode(), toString() 메서드가 자동 생성됩니다.
+```java
+private final DataSource dataSource;  // 데이터베이스 연결 소스
+```
 
-#### 메서드 상세 설명
+Spring의 `DataSource`를 주입받아 데이터베이스 연결을 관리합니다.
+
+##### 생성자 상세 설명
+
+**`public MainService(DataSource dataSource)`**
+- **매개변수:** `DataSource dataSource` - 데이터베이스 연결 소스
+- **동작 방식:** Spring이 `DataSource` 빈을 주입하여 `dataSource` 필드를 초기화합니다.
+
+##### 메서드 상세 설명
+
+**`public MainDto.MainSummary getSummary() throws SQLException`**
+- **매개변수:** 없음
+- **반환값:** `MainDto.MainSummary` - 대시보드 요약 정보
+- **동작 방식:**
+  1. `dataSource.getConnection()`을 호출하여 데이터베이스 연결을 획득합니다.
+  2. `try-with-resources` 구문을 사용하여 연결을 자동으로 닫습니다.
+  3. 다음 4개의 통계를 순차적으로 조회합니다:
+     - `countActiveProjects(conn)`: 활성 프로젝트 수
+     - `getTotalCarbonReduction(conn)`: 탄소 감축량
+     - `countDelayedDeliveries(conn)`: 지연 배송 건수
+     - `getAverageEsgGrade(conn)`: 평균 ESG 등급
+  4. 조회된 값들을 `MainDto.MainSummary` 객체로 포장하여 반환합니다.
+- **예외 처리:** `SQLException`이 발생하면 상위로 전파됩니다.
+
+**`private int countActiveProjects(Connection conn) throws SQLException`**
+- **접근 제어자:** `private`
+- **매개변수:** `Connection conn` - 데이터베이스 연결 객체
+- **반환값:** `int` - 활성 프로젝트 수
+- **동작 방식:**
+  1. SQL 쿼리: `SELECT COUNT(*) FROM ShipProject WHERE Status != '인도완료'`
+  2. `PreparedStatement`를 사용하여 쿼리를 실행합니다.
+  3. `ResultSet.next()`를 호출하여 첫 번째 행으로 이동합니다.
+  4. `rs.getInt(1)`로 카운트 값을 추출합니다.
+  5. `try-with-resources`로 자동 리소스 해제를 보장합니다.
+- **비즈니스 로직:** '인도완료' 상태가 아닌 모든 프로젝트를 활성 프로젝트로 간주합니다.
+
+**`private double getTotalCarbonReduction(Connection conn) throws SQLException`**
+- **접근 제어자:** `private`
+- **매개변수:** `Connection conn` - 데이터베이스 연결 객체
+- **반환값:** `double` - 탄소 감축량 (kg CO₂e)
+- **동작 방식:**
+  1. SQL 쿼리: `SELECT COALESCE(SUM(CO2eAmount), 0) FROM CarbonEmissionRecord`
+  2. `COALESCE` 함수를 사용하여 NULL 값을 0으로 처리합니다.
+  3. 모든 탄소 배출 기록의 합계를 계산합니다.
+  4. 기준값 1000에서 총 배출량을 차감하여 감축량을 계산합니다.
+  5. `Math.max(0, 1000 - totalEmission)`을 사용하여 음수 값이 나오지 않도록 보장합니다.
+- **비즈니스 로직:** 기준값(1000 kg CO₂e) 대비 실제 배출량을 비교하여 감축량을 산출합니다.
+
+**`private int countDelayedDeliveries(Connection conn) throws SQLException`**
+- **접근 제어자:** `private`
+- **매개변수:** `Connection conn` - 데이터베이스 연결 객체
+- **반환값:** `int` - 지연 배송 건수
+- **동작 방식:**
+  1. SQL 쿼리: `SELECT COUNT(*) FROM Delivery WHERE Status = '지연'`
+  2. 상태가 '지연'인 배송 레코드의 개수를 카운트합니다.
+  3. 결과를 정수로 반환합니다.
+- **비즈니스 로직:** 배송 상태가 '지연'인 경우를 지연 배송으로 간주합니다.
+
+**`private String getAverageEsgGrade(Connection conn) throws SQLException`**
+- **접근 제어자:** `private`
+- **매개변수:** `Connection conn` - 데이터베이스 연결 객체
+- **반환값:** `String` - 평균 ESG 등급 ("A", "B", "C", "D" 중 하나)
+- **동작 방식:**
+  1. SQL 쿼리에서 `CASE` 문을 사용하여 ESG 등급을 점수로 환산합니다:
+     - 'A' → 4점
+     - 'B' → 3점
+     - 'C' → 2점
+     - 'D' → 1점
+     - 기타 → 0점
+  2. `AVG()` 집계 함수로 평균 점수를 계산합니다.
+  3. `WHERE ESGGrade IS NOT NULL` 조건으로 NULL 값을 제외합니다.
+  4. 평균 점수를 다시 등급 문자로 변환합니다:
+     - `avg >= 3.5` → "A"
+     - `avg >= 2.5` → "B"
+     - `avg >= 1.5` → "C"
+     - 그 외 → "D"
+- **비즈니스 로직:** 모든 공급업체의 ESG 등급을 평균내어 전체 평균 등급을 산출합니다.
+
+#### 2. `ProjectService` 클래스
+
+**파일:** `hw10/service/ProjectService.java`
+
+- **`getDashboardStats(projectId)`**
+  - `ProjectRepository`를 통해 다음 데이터를 조회 및 계산합니다:
+    1. 총 발주 금액 (발주서+세부항목 조인)
+    2. 운송/보관/가공 단계별 탄소 배출량 합계
+    3. 발주 금액 기준 상위 3개 공급업체
+    4. 탄소 집약도 (배출량 / 비용 백만원) 지표 계산
+
+#### 3. `OrderService` 클래스
+
+**파일:** `hw10/service/OrderService.java`
+
+- **`createOrder(request)`**
+  - `OrderTransactionService`를 인스턴스화하고 DTO 데이터를 변환하여 트랜잭션 메서드를 호출합니다. 발생한 예외를 `SQLException`으로 래핑하여 상위로 던집니다.
+- **`searchParts`**, **`getOptions`** 관련 메서드들
+  - 단순 조회 쿼리들을 실행하고 DTO로 매핑합니다.
+
+#### 4. `OrderTransactionService` 클래스 (핵심)
+
+**파일:** `hw10/service/OrderTransactionService.java`  
+**패키지:** `hw10.service`  
+**어노테이션:** `@Service`  
+**역할:** 발주 등록 트랜잭션을 처리하는 핵심 서비스 클래스입니다. [기능 2] 요구사항에 따라 발주서 생성, 납품 기록 생성, 재고 반영을 하나의 트랜잭션으로 묶어 처리합니다.
+
+##### 클래스 구조 및 의존성
+
+```java
+private final DataSource dataSource;  // 데이터베이스 연결 소스
+private final SequenceGenerator sequenceGenerator = new SequenceGenerator();  // ID 생성기
+private final OrderRepository orderRepository = new OrderRepository();  // 발주 리포지토리
+private final DeliveryRepository deliveryRepository = new DeliveryRepository();  // 납품 리포지토리
+private final InventoryRepository inventoryRepository = new InventoryRepository();  // 재고 리포지토리
+```
+
+##### 내부 레코드 클래스
+
+**`public record OrderLineInput(int partId, int quantity, double unitPrice)`**
+- 발주 품목 입력 데이터를 담는 불변 레코드입니다.
+- `partId`: 부품 ID
+- `quantity`: 수량
+- `unitPrice`: 단가
+
+**`public record TransactionResult(int poid, int deliveryId)`**
+- 트랜잭션 실행 결과를 담는 레코드입니다.
+- `poid`: 생성된 발주서 ID
+- `deliveryId`: 생성된 납품서 ID
+
+##### 생성자 상세 설명
+
+**`public OrderTransactionService(DataSource dataSource)`**
+- **매개변수:** `DataSource dataSource` - 데이터베이스 연결 소스
+- **동작 방식:** `dataSource` 필드를 초기화하고, 리포지토리 인스턴스들을 생성합니다.
+
+##### 메서드 상세 설명
+
+**`public TransactionResult createOrderWithInitialDelivery(int projectId, int supplierId, String engineerName, String status, List<OrderLineInput> lines, int warehouseId, String transportMode, Double distanceKm) throws Exception`**
+- **매개변수:**
+  - `int projectId`: 프로젝트 ID
+  - `int supplierId`: 공급업체 ID
+  - `String engineerName`: 담당 엔지니어 이름
+  - `String status`: 발주 상태 (null이면 "요청"으로 기본값 설정)
+  - `List<OrderLineInput> lines`: 발주 품목 리스트
+  - `int warehouseId`: 입고 창고 ID
+  - `String transportMode`: 운송 수단
+  - `Double distanceKm`: 운송 거리 (km)
+- **반환값:** `TransactionResult` - 생성된 발주서 ID와 납품서 ID
+- **동작 방식 (전체 흐름):**
+
+  **1단계: 재시도 루프 설정**
+  - 최대 3회 재시도 로직을 구현합니다.
+  - `for (int attempt = 1; attempt <= maxRetries; attempt++)` 루프를 사용합니다.
+
+  **2단계: 데이터베이스 연결 획득**
+  - `dataSource.getConnection()`을 호출하여 연결을 획득합니다.
+  - `try-with-resources`로 자동 연결 해제를 보장합니다.
+
+  **3단계: 트랜잭션 시작**
+  - `conn.setAutoCommit(false)`: 자동 커밋 모드를 비활성화하여 수동 트랜잭션 제어를 시작합니다.
+  - `conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED)`: 격리 수준을 READ_COMMITTED로 설정합니다.
+    - READ_COMMITTED: 커밋된 데이터만 읽을 수 있어 Dirty Read를 방지합니다.
+    - 동시성과 일관성의 균형을 맞춘 수준입니다.
+  - `Logger.info("트랜잭션 시작(attempt=" + attempt + ")")`로 로그를 기록합니다.
+
+  **4단계: 발주서 ID 생성 및 발주서 삽입**
+  - `sequenceGenerator.nextId(conn, "PurchaseOrder.POID")`를 호출하여 다음 발주서 ID를 생성합니다.
+  - `new Date(System.currentTimeMillis())`로 오늘 날짜를 생성합니다.
+  - 상태 값이 없으면 기본값 "요청"을 사용합니다.
+  - `orderRepository.insertPurchaseOrder(conn, poid, today, orderStatus, engineerName, projectId, supplierId)`를 호출하여 `PurchaseOrder` 테이블에 레코드를 삽입합니다.
+
+  **5단계: 발주 품목 삽입 (반복)**
+  - `lines` 리스트를 순회하며 각 품목을 처리합니다.
+  - `lineNo`를 1부터 시작하여 순차적으로 증가시킵니다.
+  - `orderRepository.insertPurchaseOrderLine(conn, poid, lineNo, li.partId(), li.quantity(), li.unitPrice(), null)`를 호출하여 `PurchaseOrderLine` 테이블에 각 품목을 삽입합니다.
+  - `RequestedDueDate`는 현재 `null`로 설정됩니다.
+
+  **6단계: 납품서 ID 생성 및 초기 납품 삽입**
+  - `sequenceGenerator.nextId(conn, "Delivery.DeliveryID")`를 호출하여 다음 납품서 ID를 생성합니다.
+  - `deliveryRepository.insertDelivery(conn, deliveryId, poid, today, transportMode, distanceKm, "정상입고")`를 호출하여 `Delivery` 테이블에 초기 납품 레코드를 삽입합니다.
+  - 상태는 "정상입고"로 설정하고, 날짜는 오늘 날짜를 사용합니다.
+
+  **7단계: 납품 품목 삽입 및 재고 반영 (반복)**
+  - `lines` 리스트를 다시 순회합니다.
+  - 각 품목에 대해:
+    1. 초기 수량 계산: `received = (int) Math.round(li.quantity() * 0.5)` (발주 수량의 50%)
+    2. 0개일 경우 1개로 보정: `if (received == 0 && li.quantity() > 0) received = 1;`
+    3. `deliveryRepository.insertDeliveryLine(conn, deliveryId, poid, lineNo, received, "초기납품(자동)")`를 호출하여 `DeliveryLine` 테이블에 납품 품목을 삽입합니다.
+    4. `inventoryRepository.addInventory(conn, warehouseId, li.partId(), received)`를 호출하여 창고 재고를 증가시킵니다.
+      - 이 메서드는 `ON CONFLICT DO UPDATE` 구문을 사용하여 UPSERT를 수행합니다.
+      - 기존 재고가 있으면 수량을 더하고, 없으면 새로 삽입합니다.
+
+  **8단계: 트랜잭션 커밋**
+  - 모든 작업이 성공적으로 완료되면 `conn.commit()`을 호출하여 변경사항을 데이터베이스에 영구 반영합니다.
+  - `Logger.info("트랜잭션 커밋 완료 - 발주서 ID: " + poid + ", 납품서 ID: " + deliveryId)`로 성공 로그를 기록합니다.
+  - `TransactionResult` 객체를 생성하여 반환합니다.
+
+  **9단계: 예외 처리 및 롤백**
+  - `SQLException`이 발생하면:
+    1. `conn.rollback()`을 호출하여 모든 변경사항을 취소합니다.
+    2. `Logger.warn("트랜잭션 롤백 - 오류 발생: " + e.getMessage())`로 롤백 로그를 기록합니다.
+    3. 롤백 자체가 실패하면 `Logger.error("롤백 실패", re)`로 에러 로그를 기록하고 예외를 다시 던집니다.
+    4. **교착상태(Deadlock) 처리:**
+       - `e.getSQLState()`가 "40P01"인 경우 (PostgreSQL 교착상태 에러 코드)
+       - `attempt < maxRetries`인 경우 재시도를 수행합니다.
+       - `Thread.sleep(200L * attempt)`로 지수 백오프(Exponential Backoff)를 적용합니다.
+         - 1회차: 200ms 대기
+         - 2회차: 400ms 대기
+         - 3회차: 600ms 대기
+       - `continue`로 루프의 다음 반복으로 진행합니다.
+    5. 교착상태가 아니거나 재시도 횟수를 초과한 경우 예외를 다시 던집니다.
+
+  **10단계: 재시도 초과 처리**
+  - 모든 재시도가 실패한 경우 `IllegalStateException("트랜잭션 재시도 초과")`를 발생시킵니다.
+
+- **트랜잭션 원자성 보장:**
+  - 모든 작업이 하나의 트랜잭션으로 묶여 있어, 어느 단계에서든 오류가 발생하면 전체 작업이 롤백됩니다.
+  - 발주서만 생성되고 납품서 생성이 실패하는 경우, 발주서도 함께 롤백됩니다.
+  - 재고 반영이 실패하면 발주서와 납품서 모두 롤백됩니다.
+
+- **동시성 제어:**
+  - READ_COMMITTED 격리 수준으로 Dirty Read를 방지합니다.
+  - 교착상태 발생 시 자동 재시도로 일시적인 동시성 문제를 해결합니다.
+
+- **예외 처리:**
+  - `SQLException`: 데이터베이스 관련 오류
+  - `IllegalStateException`: 재시도 횟수 초과
+  - 모든 예외는 상위로 전파되어 `GlobalExceptionHandler`가 처리합니다.
+
+#### 5. `SupplierService` 클래스
+
+**파일:** `hw10/service/SupplierService.java`  
+**패키지:** `hw10.service`  
+**어노테이션:** `@Service`  
+**역할:** 공급업체 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. [기능 3] 요구사항에 따라 ESG 및 지연율 필터링 기능을 제공합니다.
+
+##### 클래스 구조 및 의존성
+
+```java
+private final DataSource dataSource;
+private final SupplierRepository supplierRepository;
+```
+
+##### 생성자 상세 설명
+
+**`public SupplierService(DataSource dataSource)`**
+- **매개변수:** `DataSource dataSource` - 데이터베이스 연결 소스
+- **동작 방식:** `dataSource`를 초기화하고 `SupplierRepository` 인스턴스를 생성합니다.
+
+##### 메서드 상세 설명
+
+**`public List<SupplierDto.SupplierRow> listSuppliers(List<String> esgGrades, Double minRatio, Double maxRatio) throws SQLException`**
+- **매개변수:**
+  - `List<String> esgGrades` - ESG 등급 필터 (null 가능)
+  - `Double minRatio` - 최소 지연율 (null 가능)
+  - `Double maxRatio` - 최대 지연율 (null 가능)
+- **반환값:** `List<SupplierDto.SupplierRow>` - 공급업체 목록
+- **동작 방식:**
+  1. `supplierRepository.listSuppliers(conn, esgGrades, minRatio, maxRatio)`를 호출합니다.
+  2. 결과를 `SupplierDto.SupplierRow` 리스트로 변환합니다.
+  3. Java Stream API를 사용하여 매핑합니다.
+- **비즈니스 로직:** [기능 3] 요구사항에 따라 ESG 등급 다중 선택 및 지연율 필터를 지원합니다.
+
+**`public SupplierDto.SupplierDetail getSupplierDetail(int supplierId) throws SQLException`**
+- **매개변수:** `int supplierId` - 공급업체 ID
+- **반환값:** `SupplierDto.SupplierDetail` - 공급업체 상세 정보
+- **동작 방식:**
+  1. 모든 공급업체 목록을 조회합니다.
+  2. `supplierId`로 필터링하여 해당 업체를 찾습니다.
+  3. 없으면 `IllegalArgumentException`을 발생시킵니다.
+  4. `supplierRepository.recentPurchaseOrders(conn, supplierId, 5, 0)`를 호출하여 최근 5개 발주 내역을 조회합니다.
+  5. `SupplierDetail` 객체를 생성하여 반환합니다.
+- **비즈니스 로직:** [기능 3] 요구사항에 따라 공급업체 상세 화면에서 최근 N개 발주서 목록을 제공합니다.
+
+**`public List<SupplierDto.SupplierPoRow> getSupplierOrders(int supplierId, int page, int size) throws SQLException`**
+- **매개변수:**
+  - `int supplierId` - 공급업체 ID
+  - `int page` - 페이지 번호
+  - `int size` - 페이지당 항목 수
+- **반환값:** `List<SupplierDto.SupplierPoRow>` - 발주 내역 리스트
+- **동작 방식:**
+  1. `offset = page * size`로 오프셋을 계산합니다.
+  2. `supplierRepository.recentPurchaseOrders(conn, supplierId, size, offset)`를 호출합니다.
+  3. 결과를 `SupplierPoRow` 리스트로 변환합니다.
+- **비즈니스 로직:** 페이징 기능을 제공하여 대량의 발주 내역을 효율적으로 조회합니다.
+
+#### 6. `SettingService` 클래스
+
+**파일:** `hw10/service/SettingService.java`  
+**패키지:** `hw10.service`  
+**어노테이션:** `@Service`  
+**역할:** 시스템 설정 및 로그 관련 비즈니스 로직을 처리하는 서비스 클래스입니다. [기능 4] 요구사항에 따라 로그 조회 및 시스템 상태 확인 기능을 제공합니다.
+
+##### 클래스 구조 및 상수
+
+```java
+private static final String LOG_FILE_PATH = "logs/app.log";
+private static final DateTimeFormatter LOG_DATE_FORMAT = 
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+```
+
+##### 메서드 상세 설명
+
+**`public Map<String, Object> getLogs(String level, int limit, String search)`**
+- **매개변수:**
+  - `String level` - 로그 레벨 필터 ("INFO", "WARNING", "SEVERE", null 가능)
+  - `int limit` - 조회할 최대 개수
+  - `String search` - 검색어 (null 가능)
+- **반환값:** `Map<String, Object>` - 로그 데이터 및 메타데이터
+- **동작 방식:**
+  1. `logs/app.log` 파일이 없으면 빈 결과를 반환합니다.
+  2. `Files.readAllLines(logPath)`로 모든 라인을 읽습니다.
+  3. 정규식 패턴으로 로그를 파싱합니다:
+     - 패턴: `\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]\s+\[(INFO|WARNING|SEVERE)\]\s+(.+)`
+     - 그룹 1: 타임스탬프
+     - 그룹 2: 로그 레벨
+     - 그룹 3: 메시지 시작 부분
+  4. 멀티라인 로그(스택 트레이스 등)를 처리합니다.
+  5. 레벨 필터와 검색어 필터를 적용합니다.
+  6. 최신순으로 정렬하고 개수 제한을 적용합니다.
+  7. 결과를 `Map`으로 반환합니다:
+     - `logs`: 파싱된 로그 리스트
+     - `total`: 전체 라인 수
+     - `filtered`: 필터링된 로그 수
+- **비즈니스 로직:** [기능 4] 요구사항에 따라 로그 파일을 읽어 조건에 맞게 필터링하여 반환합니다.
+
+**`private void finalizeLogEntry(...)`**
+- 로그 항목을 최종화하고 필터를 적용하는 헬퍼 메서드입니다.
+- 메시지가 200자 이상이면 잘라서 표시합니다.
+
+**`private String extractSource(String message)`**
+- 로그 메시지에서 발생 위치를 추론하는 헬퍼 메서드입니다.
+- 클래스명 패턴을 찾거나 키워드로 추론합니다.
+
+**`public Map<String, Object> getSystemStatus()`**
+- **매개변수:** 없음
+- **반환값:** `Map<String, Object>` - 시스템 상태 정보
+- **동작 방식:**
+  1. `DatabaseConfig.load()`로 설정을 로드합니다.
+  2. `DatabaseConnection`을 생성하여 연결을 시도합니다.
+  3. `SELECT 1` 쿼리를 실행하여 응답 시간을 측정합니다.
+  4. 결과를 `Map`으로 반환합니다:
+     - `status`: "정상" 또는 "오류"
+     - `dbConnected`: DB 연결 여부 (boolean)
+     - `activeConnections`: 활성 연결 수
+     - `queryLatency`: 쿼리 응답 시간 (ms)
+     - `lastSync`: 마지막 동기화 시간
+- **비즈니스 로직:** [기능 4] 요구사항에 따라 시스템 상태를 점검합니다.
+
+---
+
+### 2.2.6 `hw10.repository` 패키지 (DAO)
+
+#### 1. `ProjectRepository` 클래스
+
+**파일:** `hw10/repository/ProjectRepository.java`  
+**패키지:** `hw10.repository`  
+**접근 제어자:** `public final class`  
+**역할:** 프로젝트 관련 데이터베이스 조회 작업을 수행하는 리포지토리 클래스입니다. 프로젝트 정보 조회, 통계 계산, 탄소 배출량 집계 등의 기능을 제공합니다.
+
+##### 내부 레코드 클래스
+
+**`public record ProjectBasic(int projectId, String shipName, String shipType, java.sql.Date contractDate, java.sql.Date deliveryDueDate, String status)`**
+- 프로젝트 기본 정보를 담는 불변 레코드입니다.
+
+**`public record SupplierAmount(int supplierId, String name, double amount)`**
+- 공급업체별 발주 금액 통계를 담는 레코드입니다.
+
+**`public record ProjectSearchItem(int projectId, String shipName, String shipType, String status)`**
+- 프로젝트 검색 결과 항목을 담는 레코드입니다.
+
+##### 메서드 상세 설명
 
 **`public ProjectBasic findProjectById(Connection conn, int projectId) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int projectId`: 프로젝트 ID
+- **반환값:** `ProjectBasic` 객체 또는 `null` (프로젝트가 없는 경우)
+- **SQL 쿼리:**
+```sql
+SELECT ProjectID, ShipName, ShipType, ContractDate, DeliveryDueDate, Status
+FROM ShipProject
+WHERE ProjectID = ?
+```
+- **동작 방식:**
+  1. `PreparedStatement`를 사용하여 파라미터화된 쿼리를 실행합니다.
+  2. `ps.setInt(1, projectId)`로 프로젝트 ID를 바인딩합니다.
+  3. `ResultSet.next()`를 호출하여 결과를 확인합니다.
+  4. 결과가 없으면 `null`을 반환합니다.
+  5. 결과가 있으면 `ProjectBasic` 레코드를 생성하여 반환합니다.
+- **예외 처리:** `SQLException`이 발생하면 상위로 전파됩니다.
 
-ProjectID로 프로젝트 기본 정보를 조회하는 메서드입니다. ShipProject 테이블에서 ProjectID가 일치하는 한 건을 조회합니다.
-
-Text Block(""" """)을 사용하여 여러 줄의 SQL 문자열을 가독성 좋게 작성했습니다. PreparedStatement의 ?에 projectId를 바인딩하여 SQL 인젝션을 방지합니다. 결과가 없으면 null을 반환하고, 있으면 ResultSet에서 값을 추출하여 ProjectBasic 객체를 생성하여 반환합니다.
-
-**`public List<ProjectSearchItem> searchProjectsByShipName(Connection conn, String keyword, int limit) throws SQLException`**
-
-선박명으로 프로젝트를 검색하는 메서드입니다. PostgreSQL의 ILIKE 연산자를 사용하여 대소문자 구분 없이 부분 일치 검색을 수행합니다.
-
-검색 키워드 앞뒤에 % 와일드카드를 붙여 "%" + keyword + "%" 형태로 바인딩합니다. 이렇게 하면 키워드가 선박명의 어느 위치에 있든 검색됩니다. LIMIT 절로 결과 수를 제한하고, ORDER BY ProjectID로 정렬합니다. 결과를 List<ProjectSearchItem>으로 반환합니다.
+**`public List<ProjectSearchItem> searchProjectsByShipName(Connection conn, String keyword, int limit, int offset) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `String keyword`: 선박명 검색어 (부분 일치)
+  - `int limit`: 조회할 최대 개수
+  - `int offset`: 건너뛸 레코드 수 (페이징용)
+- **반환값:** `List<ProjectSearchItem>` - 검색 결과 리스트
+- **SQL 쿼리:**
+```sql
+SELECT ProjectID, ShipName, ShipType, Status
+FROM ShipProject
+WHERE ShipName ILIKE ?
+ORDER BY ProjectID
+LIMIT ? OFFSET ?
+```
+- **동작 방식:**
+  1. `ILIKE` 연산자를 사용하여 대소문자 구분 없이 부분 일치 검색을 수행합니다.
+  2. `ps.setString(1, "%" + keyword + "%")`로 와일드카드를 포함한 검색어를 바인딩합니다.
+  3. `ps.setInt(2, limit)`, `ps.setInt(3, offset)`로 페이징 파라미터를 바인딩합니다.
+  4. `ProjectID` 순으로 정렬하여 일관된 결과를 보장합니다.
+  5. `ResultSet`을 순회하며 `ProjectSearchItem` 리스트를 생성합니다.
+- **용도:** 프로젝트 검색 및 페이징 처리에 사용됩니다.
 
 **`public double totalOrderAmount(Connection conn, int projectId) throws SQLException`**
-
-프로젝트의 총 발주 금액을 계산하는 메서드입니다. 과제 요구사항에서 명시한 JOIN과 SUM 집계 함수를 사용합니다.
-
-PurchaseOrder와 PurchaseOrderLine 테이블을 POID로 JOIN하여 해당 프로젝트의 모든 발주 항목을 찾습니다. SUM(pol.Quantity * pol.UnitPriceAtOrder)로 수량과 단가를 곱한 값의 합계를 계산합니다. COALESCE 함수는 발주가 없어서 SUM 결과가 NULL인 경우 0을 반환하도록 합니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int projectId`: 프로젝트 ID
+- **반환값:** `double` - 총 발주 금액
+- **SQL 쿼리:**
+```sql
+SELECT COALESCE(SUM(pol.Quantity * pol.UnitPriceAtOrder), 0) AS total_amount
+FROM PurchaseOrder po
+JOIN PurchaseOrderLine pol ON pol.POID = po.POID
+WHERE po.ProjectID = ?
+```
+- **동작 방식:**
+  1. `PurchaseOrder`와 `PurchaseOrderLine` 테이블을 `POID`로 조인합니다.
+  2. `WHERE po.ProjectID = ?` 조건으로 특정 프로젝트의 발주만 필터링합니다.
+  3. `SUM(pol.Quantity * pol.UnitPriceAtOrder)`로 각 품목의 금액(수량 × 단가)을 합산합니다.
+  4. `COALESCE(..., 0)`로 NULL 값을 0으로 처리합니다 (발주가 없는 경우).
+  5. 결과를 `double`로 반환합니다.
+- **비즈니스 로직:** [기능 1] 요구사항에 따라 프로젝트의 총 발주 금액을 계산합니다.
 
 **`public List<SupplierAmount> topSuppliersByAmount(Connection conn, int projectId, int topN) throws SQLException`**
-
-공급업체별 발주 금액 상위 N개를 조회하는 메서드입니다. 과제 요구사항에서 명시한 GROUP BY, ORDER BY, LIMIT을 모두 사용합니다.
-
-세 테이블(PurchaseOrder, PurchaseOrderLine, Supplier)을 JOIN합니다. GROUP BY로 공급업체별로 그룹화하고, SUM으로 각 그룹의 발주 금액을 집계합니다. ORDER BY amount DESC로 금액 내림차순 정렬하고, LIMIT으로 상위 N개만 반환합니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int projectId`: 프로젝트 ID
+  - `int topN`: 상위 N개 (예: 3)
+- **반환값:** `List<SupplierAmount>` - 상위 공급업체 리스트
+- **SQL 쿼리:**
+```sql
+SELECT s.SupplierID, s.Name, SUM(pol.Quantity * pol.UnitPriceAtOrder) AS amount
+FROM PurchaseOrder po
+JOIN PurchaseOrderLine pol ON pol.POID = po.POID
+JOIN Supplier s ON s.SupplierID = po.SupplierID
+WHERE po.ProjectID = ?
+GROUP BY s.SupplierID, s.Name
+ORDER BY amount DESC
+LIMIT ?
+```
+- **동작 방식:**
+  1. `PurchaseOrder`, `PurchaseOrderLine`, `Supplier` 테이블을 조인합니다.
+  2. `WHERE po.ProjectID = ?` 조건으로 특정 프로젝트의 발주만 필터링합니다.
+  3. `GROUP BY s.SupplierID, s.Name`으로 공급업체별로 그룹화합니다.
+  4. `SUM(pol.Quantity * pol.UnitPriceAtOrder)`로 각 공급업체의 총 발주 금액을 계산합니다.
+  5. `ORDER BY amount DESC`로 금액 내림차순 정렬합니다.
+  6. `LIMIT ?`로 상위 N개만 조회합니다.
+  7. 결과를 `SupplierAmount` 리스트로 변환하여 반환합니다.
+- **비즈니스 로직:** [기능 1] 요구사항에 따라 공급업체별 발주 금액 상위 3개를 조회합니다.
 
 **`public double emissionSumByType(Connection conn, int projectId, String emissionType) throws SQLException`**
-
-특정 배출 유형(운송 또는 보관)의 탄소배출 합계를 계산하는 메서드입니다.
-
-CarbonEmissionRecord 테이블에서 두 가지 조건을 OR로 결합합니다. 첫째, 프로젝트에 직접 연결된 레코드(c.ProjectID = ?). 둘째, 해당 프로젝트의 발주서에 연결된 Delivery를 통해 간접적으로 연결된 레코드. 두 번째 조건을 위해 서브쿼리를 사용하여 해당 프로젝트의 모든 DeliveryID를 찾습니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int projectId`: 프로젝트 ID
+  - `String emissionType`: 배출 유형 ("운송", "보관", "가공", "생산" 등)
+- **반환값:** `double` - 해당 유형의 탄소 배출량 합계 (kg CO₂e)
+- **SQL 쿼리:**
+```sql
+SELECT COALESCE(SUM(c.CO2eAmount), 0) AS s
+FROM CarbonEmissionRecord c
+WHERE c.EmissionType = ?
+  AND (
+        c.ProjectID = ?
+        OR c.DeliveryID IN (
+            SELECT d.DeliveryID
+            FROM Delivery d
+            JOIN PurchaseOrder po ON po.POID = d.POID
+            WHERE po.ProjectID = ?
+        )
+      )
+```
+- **동작 방식:**
+  1. `CarbonEmissionRecord` 테이블에서 배출 기록을 조회합니다.
+  2. `WHERE c.EmissionType = ?` 조건으로 특정 유형의 배출만 필터링합니다.
+  3. 배출 기록이 프로젝트에 직접 연결된 경우(`c.ProjectID = ?`) 또는 배송을 통해 간접 연결된 경우(`c.DeliveryID IN (서브쿼리)`)를 모두 포함합니다.
+  4. 서브쿼리에서 `Delivery`와 `PurchaseOrder`를 조인하여 해당 프로젝트의 배송을 찾습니다.
+  5. `SUM(c.CO2eAmount)`로 배출량을 합산합니다.
+  6. `COALESCE(..., 0)`로 NULL 값을 0으로 처리합니다.
+- **비즈니스 로직:** [기능 1] 요구사항에 따라 운송/보관 관련 탄소 배출 합계를 계산합니다.
 
 **`public double emissionSumTotal(Connection conn, int projectId) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int projectId`: 프로젝트 ID
+- **반환값:** `double` - 프로젝트 전체 탄소 배출량 합계 (kg CO₂e)
+- **SQL 쿼리:**
+```sql
+SELECT COALESCE(SUM(c.CO2eAmount), 0) AS s
+FROM CarbonEmissionRecord c
+WHERE (
+        c.ProjectID = ?
+        OR c.DeliveryID IN (
+            SELECT d.DeliveryID
+            FROM Delivery d
+            JOIN PurchaseOrder po ON po.POID = d.POID
+            WHERE po.ProjectID = ?
+        )
+      )
+```
+- **동작 방식:**
+  1. `emissionSumByType`과 유사하지만 `EmissionType` 조건 없이 모든 유형의 배출을 합산합니다.
+  2. 프로젝트에 직접 연결된 배출과 배송을 통해 간접 연결된 배출을 모두 포함합니다.
+- **비즈니스 로직:** [기능 1] 요구사항에 따라 프로젝트 전체 탄소 배출 합계를 계산합니다.
 
-프로젝트 전체 탄소배출 합계를 계산하는 메서드입니다. emissionSumByType()과 동일한 로직이지만 EmissionType 필터가 없어 모든 유형의 배출량을 합산합니다.
+**`public Double calculateCarbonIntensity(Connection conn, int projectId) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int projectId`: 프로젝트 ID
+- **반환값:** `Double` - 탄소 집약도 (kg CO₂e / 백만 원) 또는 `null` (발주 금액이 0인 경우)
+- **동작 방식:**
+  1. `emissionSumTotal(conn, projectId)`를 호출하여 총 배출량을 조회합니다.
+  2. `totalOrderAmount(conn, projectId)`를 호출하여 총 발주 금액을 조회합니다.
+  3. 발주 금액이 0이면 계산 불가이므로 `null`을 반환합니다.
+  4. 탄소 집약도 계산: `(총 배출량 / 총 발주금액) * 1,000,000`
+     - 단위: kg CO₂e / 백만 원
+  5. `Math.round(intensity * 10.0) / 10.0`로 소수점 첫째 자리까지 반올림합니다.
+- **비즈니스 로직:** [기능 1] 요구사항에 따라 "탄소 집약도(kg CO₂e / 백만 원)" 지표를 계산합니다.
 
-#### 과제 요구사항 충족
+#### 2. `SupplierRepository` 클래스
 
-- **[기능 1]** 총 발주 금액을 발주서+발주항목 기준으로 집계합니다.
-- **[기능 1]** 공급업체별 발주 금액 상위 3개를 조회합니다.
-- **[기능 1]** 운송/보관/전체 탄소배출 합계를 계산합니다.
-- **[기능 1]** 집계 함수, GROUP BY, JOIN을 코드 안에서 활용합니다.
+**파일:** `hw10/repository/SupplierRepository.java`  
+**패키지:** `hw10.repository`  
+**접근 제어자:** `public final class`  
+**역할:** 공급업체 관련 데이터베이스 조회 작업을 수행하는 리포지토리입니다. [기능 3] 요구사항에 따라 ESG 등급 및 지연율 필터링 기능을 제공합니다.
 
----
+##### 내부 레코드 클래스
 
-### 2.3.7 SupplierRepository (공급업체 DAO)
+**`public record SupplierRow(int supplierId, String name, String country, String esgGrade, double totalOrderAmount, int delayedDeliveries, int totalDeliveries, double delayRatio)`**
+- 공급업체 목록 행 데이터를 담는 레코드입니다.
+- `delayRatio`: 지연 납품 비율 (0.0 ~ 1.0)
 
-**파일 위치:** `hw10/dao/SupplierRepository.java`
+**`public record SupplierPoRow(int poid, java.sql.Date orderDate, String status, boolean delayed)`**
+- 공급업체의 발주 이력을 담는 레코드입니다.
+- `delayed`: 지연 여부 (boolean)
 
-SupplierRepository 클래스는 기능 3(공급업체 ESG 및 지연 납품 리포트)에서 필요한 데이터 조회를 담당합니다. WITH CTE(Common Table Expression)를 활용한 복잡한 쿼리와 동적 필터링을 구현합니다.
-
-#### 내부 record 정의
-
-| record | 필드 | 설명 |
-|--------|------|------|
-| `SupplierRow` | supplierId, name, country, esgGrade, totalOrderAmount, delayedDeliveries, totalDeliveries, delayRatio | 공급업체 목록 행 (지연 비율 포함) |
-| `SupplierPoRow` | poid, orderDate, status, delayed | 발주서 상세 행 (지연 여부 포함) |
-
-#### 메서드 상세 설명
+##### 메서드 상세 설명
 
 **`public List<SupplierRow> listSuppliers(Connection conn, List<String> esgGrades, Double minRatio, Double maxRatio) throws SQLException`**
-
-ESG 등급 및 지연 비율 필터를 적용하여 공급업체 목록을 조회하는 메서드입니다. 복잡한 쿼리를 WITH CTE로 구조화했습니다.
-
-SQL은 세 개의 CTE를 정의합니다. 첫 번째 order_totals CTE는 공급업체별 총 발주 금액을 계산합니다. PurchaseOrder와 PurchaseOrderLine을 JOIN하고 SupplierID로 GROUP BY하여 SUM을 구합니다.
-
-두 번째 delivery_stats CTE는 공급업체별 전체 납품 건수와 지연 납품 건수를 계산합니다. CASE WHEN d.Status = '지연' THEN 1 ELSE 0 END 표현식으로 지연 건수를 카운트합니다. 이는 과제 요구사항의 "지연 납품 비율은 Delivery.status = '지연' 기준으로 계산"을 충족합니다.
-
-세 번째 base CTE는 Supplier 테이블에 앞의 두 CTE를 LEFT JOIN하여 모든 정보를 통합합니다. LEFT JOIN을 사용하므로 발주나 납품이 없는 공급업체도 결과에 포함됩니다. COALESCE로 NULL 값을 0으로 대체하고, CASE WHEN으로 지연 비율을 계산합니다(전체 건수가 0이면 비율도 0).
-
-필터링은 동적으로 구성됩니다. StringBuilder를 사용하여 SQL 문자열을 조립하고, 파라미터 리스트를 별도로 관리합니다. WHERE 1=1 트릭을 사용하여 이후 AND 조건을 쉽게 추가할 수 있도록 합니다.
-
-ESG 등급 필터가 제공되면 AND ESGGrade IN (?, ?, ...) 절을 동적으로 생성합니다. 지연 비율 상한/하한이 제공되면 >= ? 또는 <= ? 조건을 추가합니다. 마지막으로 발주금액 내림차순, 지연비율 내림차순, SupplierID 순으로 정렬합니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `List<String> esgGrades`: ESG 등급 필터 (예: ["A", "B"], null 가능)
+  - `Double minRatio`: 최소 지연율 필터 (0.0 ~ 1.0, null 가능)
+  - `Double maxRatio`: 최대 지연율 필터 (0.0 ~ 1.0, null 가능)
+- **반환값:** `List<SupplierRow>` - 공급업체 목록
+- **SQL 쿼리 구조 (CTE 사용):**
+```sql
+WITH order_totals AS (
+  -- 1단계: 공급사별 총 발주 금액 계산
+  SELECT po.SupplierID, SUM(pol.Quantity * pol.UnitPriceAtOrder) AS total_amount
+  FROM PurchaseOrder po
+  JOIN PurchaseOrderLine pol ON pol.POID = po.POID
+  GROUP BY po.SupplierID
+),
+delivery_stats AS (
+  -- 2단계: 공급사별 납품 건수 및 지연 건수 계산
+  SELECT po.SupplierID,
+         COUNT(*) AS total_deliveries,
+         SUM(CASE WHEN d.Status = '지연' THEN 1 ELSE 0 END) AS delayed_deliveries
+  FROM PurchaseOrder po
+  JOIN Delivery d ON d.POID = po.POID
+  GROUP BY po.SupplierID
+),
+base AS (
+  -- 3단계: 공급업체 정보와 통계 조인 및 지연율 계산
+  SELECT s.SupplierID, s.Name, s.Country, s.ESGGrade,
+         COALESCE(ot.total_amount, 0) AS total_order_amount,
+         COALESCE(ds.delayed_deliveries, 0) AS delayed_deliveries,
+         COALESCE(ds.total_deliveries, 0) AS total_deliveries,
+         CASE WHEN COALESCE(ds.total_deliveries, 0) = 0 THEN 0
+              ELSE (COALESCE(ds.delayed_deliveries, 0)::float / ds.total_deliveries)
+         END AS delay_ratio
+  FROM Supplier s
+  LEFT JOIN order_totals ot ON ot.SupplierID = s.SupplierID
+  LEFT JOIN delivery_stats ds ON ds.SupplierID = s.SupplierID
+)
+SELECT * FROM base WHERE 1=1
+  [동적 WHERE 절 추가]
+ORDER BY total_order_amount DESC, delay_ratio DESC, SupplierID
+```
+- **동작 방식:**
+  1. **CTE 1단계 (order_totals):**
+     - `PurchaseOrder`와 `PurchaseOrderLine`을 조인하여 공급사별 총 발주 금액을 계산합니다.
+     - `GROUP BY po.SupplierID`로 그룹화합니다.
+  
+  2. **CTE 2단계 (delivery_stats):**
+     - `PurchaseOrder`와 `Delivery`를 조인하여 공급사별 납품 통계를 계산합니다.
+     - `COUNT(*)`로 전체 납품 건수를 계산합니다.
+     - `SUM(CASE WHEN d.Status = '지연' THEN 1 ELSE 0 END)`로 지연 납품 건수를 계산합니다.
+  
+  3. **CTE 3단계 (base):**
+     - `Supplier` 테이블을 기준으로 `LEFT JOIN`을 수행합니다.
+     - `COALESCE`로 NULL 값을 0으로 처리합니다.
+     - 지연율 계산: `delayed_deliveries / total_deliveries`
+     - `total_deliveries`가 0이면 지연율을 0으로 설정합니다.
+     - `::float` 캐스팅으로 정수 나눗셈을 방지합니다.
+  
+  4. **동적 WHERE 절 생성:**
+     - `StringBuilder`를 사용하여 쿼리를 동적으로 구성합니다.
+     - ESG 등급 필터: `esgGrades`가 있으면 `AND ESGGrade IN (?, ?, ...)` 추가
+     - 최소 지연율 필터: `minRatio`가 있으면 `AND delay_ratio >= ?` 추가
+     - 최대 지연율 필터: `maxRatio`가 있으면 `AND delay_ratio <= ?` 추가
+  
+  5. **파라미터 바인딩:**
+     - `List<Object> params`에 필터 값을 순서대로 추가합니다.
+     - `PreparedStatement`에 동적으로 바인딩합니다.
+  
+  6. **정렬:**
+     - 발주 금액 내림차순, 지연율 내림차순, SupplierID 오름차순으로 정렬합니다.
+  
+  7. **결과 변환:**
+     - `ResultSet`을 순회하며 `SupplierRow` 리스트를 생성합니다.
+  
+- **비즈니스 로직:** [기능 3] 요구사항에 따라 ESG 등급 및 지연 납품 비율 필터링을 지원합니다.
 
 **`public List<SupplierPoRow> recentPurchaseOrders(Connection conn, int supplierId, int limit, int offset) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int supplierId`: 공급업체 ID
+  - `int limit`: 조회할 최대 개수
+  - `int offset`: 건너뛸 레코드 수 (페이징용)
+- **반환값:** `List<SupplierPoRow>` - 발주 이력 리스트
+- **SQL 쿼리:**
+```sql
+SELECT po.POID, po.OrderDate, po.Status,
+       CASE WHEN EXISTS (
+           SELECT 1 FROM Delivery d
+           WHERE d.POID = po.POID AND d.Status = '지연'
+       ) THEN TRUE ELSE FALSE END AS delayed
+FROM PurchaseOrder po
+WHERE po.SupplierID = ?
+ORDER BY po.OrderDate DESC, po.POID DESC
+LIMIT ? OFFSET ?
+```
+- **동작 방식:**
+  1. 특정 공급업체의 발주서를 조회합니다.
+  2. `EXISTS` 서브쿼리를 사용하여 해당 발주서에 지연 배송이 있는지 확인합니다.
+  3. 지연 배송이 있으면 `delayed = TRUE`, 없으면 `FALSE`로 설정합니다.
+  4. `OrderDate DESC, POID DESC`로 최신순 정렬합니다.
+  5. `LIMIT`과 `OFFSET`으로 페이징 처리를 수행합니다.
+- **비즈니스 로직:** [기능 3] 요구사항에 따라 최근 N개 발주서 목록과 지연 여부를 제공합니다.
 
-특정 공급업체의 최근 발주서를 페이징하여 조회하는 메서드입니다. 과제 요구사항의 "최근 N개 발주서 목록"과 "페이징" 기능을 구현합니다.
+#### 3. `OrderRepository` 클래스
 
-각 발주서가 지연 납품을 가지고 있는지 확인하기 위해 EXISTS 서브쿼리를 사용합니다. EXISTS (SELECT 1 FROM Delivery d WHERE d.POID = po.POID AND d.Status = '지연')은 해당 발주서에 지연 상태의 납품이 하나라도 있으면 TRUE를 반환합니다.
+**파일:** `hw10/repository/OrderRepository.java`  
+**패키지:** `hw10.repository`  
+**접근 제어자:** `public final class`  
+**역할:** 발주서(PurchaseOrder) 및 발주 품목(PurchaseOrderLine) 데이터를 데이터베이스에 저장하는 리포지토리입니다.
 
-ORDER BY po.OrderDate DESC, po.POID DESC로 최신 발주서가 먼저 나오도록 정렬합니다. LIMIT과 OFFSET으로 페이징을 구현합니다. limit은 한 페이지에 표시할 개수, offset은 건너뛸 개수(페이지 번호 * 페이지 크기)입니다.
-
-#### 과제 요구사항 충족
-
-- **[기능 3]** 공급업체별 지연 납품 비율(지연건수/전체건수)을 계산합니다.
-- **[기능 3]** ESG 등급(A~D) 다중 선택 필터를 지원합니다.
-- **[기능 3]** 지연 납품 비율 상한/하한 필터를 지원합니다.
-- **[기능 3]** 최근 N개 발주서 목록을 페이징으로 조회합니다.
-
----
-
-### 2.3.8 OrderRepository (발주 DAO)
-
-**파일 위치:** `hw10/dao/OrderRepository.java`
-
-OrderRepository 클래스는 발주서(PurchaseOrder) 및 발주항목(PurchaseOrderLine) 테이블에 대한 INSERT 작업을 담당합니다.
-
-#### 메서드 상세 설명
+##### 메서드 상세 설명
 
 **`public void insertPurchaseOrder(Connection conn, int poid, Date orderDate, String status, String engineerName, int projectId, int supplierId) throws SQLException`**
-
-PurchaseOrder 테이블에 새 발주서를 삽입하는 메서드입니다.
-
-파라미터로 POID(발주서 ID), 발주일, 상태, 담당 엔지니어명, 프로젝트 ID, 공급업체 ID를 받습니다. POID는 SequenceGenerator를 통해 미리 생성된 값을 받습니다. 상태(status)는 과제 요구사항에 따라 '요청' 또는 '발주완료' 값을 사용합니다.
-
-PreparedStatement의 ?에 각 파라미터를 순서대로 바인딩하고 executeUpdate()를 호출하여 INSERT를 실행합니다. 외래키 제약조건 위반(존재하지 않는 ProjectID, SupplierID 참조) 시 SQLException이 발생합니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체 (트랜잭션 내에서 사용)
+  - `int poid`: 발주서 ID
+  - `Date orderDate`: 발주일
+  - `String status`: 발주 상태 ("요청", "발주완료" 등)
+  - `String engineerName`: 담당 엔지니어 이름
+  - `int projectId`: 프로젝트 ID
+  - `int supplierId`: 공급업체 ID
+- **반환값:** 없음 (void)
+- **SQL 쿼리:**
+```sql
+INSERT INTO PurchaseOrder(POID, OrderDate, Status, EngineerName, ProjectID, SupplierID)
+VALUES (?, ?, ?, ?, ?, ?)
+```
+- **동작 방식:**
+  1. `PreparedStatement`를 사용하여 파라미터화된 INSERT 쿼리를 실행합니다.
+  2. 모든 파라미터를 순서대로 바인딩합니다.
+  3. `ps.executeUpdate()`를 호출하여 레코드를 삽입합니다.
+  4. 외래키 제약조건 위반 시 `SQLException`이 발생합니다.
+- **트랜잭션 처리:** 트랜잭션 내에서 호출되므로 커밋 전까지는 임시 상태입니다.
 
 **`public void insertPurchaseOrderLine(Connection conn, int poid, int lineNo, int partId, int qty, double unitPrice, Date requestedDueDate) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int poid`: 발주서 ID
+  - `int lineNo`: 라인 번호 (1부터 시작)
+  - `int partId`: 부품 ID
+  - `int qty`: 수량
+  - `double unitPrice`: 단가
+  - `Date requestedDueDate`: 요청 납기일 (null 가능)
+- **반환값:** 없음 (void)
+- **SQL 쿼리:**
+```sql
+INSERT INTO PurchaseOrderLine(POID, LineNo, PartID, Quantity, UnitPriceAtOrder, RequestedDueDate)
+VALUES (?, ?, ?, ?, ?, ?)
+```
+- **동작 방식:**
+  1. 발주서의 각 품목을 `PurchaseOrderLine` 테이블에 삽입합니다.
+  2. `lineNo`는 발주서 내에서 품목의 순서를 나타냅니다.
+  3. `requestedDueDate`가 `null`이면 `ps.setNull(6, java.sql.Types.DATE)`로 NULL을 설정합니다.
+- **용도:** 발주서 생성 시 여러 품목을 반복 호출하여 저장합니다.
 
-PurchaseOrderLine 테이블에 발주 항목을 삽입하는 메서드입니다.
+#### 4. `DeliveryRepository` 클래스
 
-POID와 LineNo가 복합 기본키를 구성합니다. LineNo는 호출자가 1부터 순차적으로 증가시켜 전달합니다. UnitPriceAtOrder는 발주 시점의 단가를 기록하여 나중에 가격이 변경되더라도 발주 당시 금액을 추적할 수 있도록 합니다. requestedDueDate는 null이 허용되며, null을 전달하면 SQL NULL이 삽입됩니다.
+**파일:** `hw10/repository/DeliveryRepository.java`  
+**패키지:** `hw10.repository`  
+**접근 제어자:** `public final class`  
+**역할:** 납품(Delivery) 및 납품 품목(DeliveryLine) 데이터를 데이터베이스에 저장하는 리포지토리입니다.
 
-#### 과제 요구사항 충족
-
-- **[기능 2]** PurchaseOrder에 발주서 1건을 삽입합니다.
-- **[기능 2]** PurchaseOrderLine에 각 발주 항목을 삽입합니다.
-
----
-
-### 2.3.9 DeliveryRepository (납품 DAO)
-
-**파일 위치:** `hw10/dao/DeliveryRepository.java`
-
-DeliveryRepository 클래스는 납품(Delivery) 및 납품상세(DeliveryLine) 테이블에 대한 INSERT 작업을 담당합니다.
-
-#### 메서드 상세 설명
+##### 메서드 상세 설명
 
 **`public void insertDelivery(Connection conn, int deliveryId, int poid, Date actualArrivalDate, String transportMode, Double distanceKm, String status) throws SQLException`**
-
-Delivery 테이블에 납품 기록을 삽입하는 메서드입니다.
-
-파라미터로 납품 ID, 발주서 ID, 실제 도착일, 운송 수단, 운송 거리, 상태를 받습니다. distanceKm는 Double 타입(래퍼 클래스)으로 선언되어 null을 허용합니다. null인 경우 ps.setNull(5, java.sql.Types.DOUBLE)을 호출하여 SQL NULL을 삽입합니다.
-
-과제 요구사항에 따라 actualArrivalDate는 오늘 날짜, status는 '정상입고' 또는 '지연' 등의 값을 사용합니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int deliveryId`: 납품서 ID
+  - `int poid`: 발주서 ID (외래키)
+  - `Date actualArrivalDate`: 실제 도착일
+  - `String transportMode`: 운송 수단
+  - `Double distanceKm`: 운송 거리 (km, null 가능)
+  - `String status`: 납품 상태 ("정상입고", "지연" 등)
+- **반환값:** 없음 (void)
+- **SQL 쿼리:**
+```sql
+INSERT INTO Delivery(DeliveryID, POID, ActualArrivalDate, TransportMode, DistanceKm, Status)
+VALUES (?, ?, ?, ?, ?, ?)
+```
+- **동작 방식:**
+  1. 초기 납품 레코드를 `Delivery` 테이블에 삽입합니다.
+  2. `distanceKm`가 `null`이면 `ps.setNull(5, java.sql.Types.DOUBLE)`로 NULL을 설정합니다.
+  3. [기능 2] 요구사항에 따라 발주 직후 "초기 납품" 1건을 자동 생성합니다.
+- **비즈니스 로직:** 발주 등록 시 자동으로 초기 납품 기록을 생성합니다.
 
 **`public void insertDeliveryLine(Connection conn, int deliveryId, int poid, int lineNo, int receivedQty, String inspectionResult) throws SQLException`**
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int deliveryId`: 납품서 ID
+  - `int poid`: 발주서 ID
+  - `int lineNo`: 라인 번호 (발주 품목과 일치)
+  - `int receivedQty`: 실제 수령 수량
+  - `String inspectionResult`: 검수 결과 ("초기납품(자동)" 등)
+- **반환값:** 없음 (void)
+- **SQL 쿼리:**
+```sql
+INSERT INTO DeliveryLine(DeliveryID, POID, LineNo, ReceivedQty, InspectionResult)
+VALUES (?, ?, ?, ?, ?)
+```
+- **동작 방식:**
+  1. 납품서의 각 품목을 `DeliveryLine` 테이블에 삽입합니다.
+  2. `receivedQty`는 발주 수량의 50%로 자동 계산됩니다.
+  3. [기능 2] 요구사항에 따라 초기 납품 수량을 자동 설정합니다.
 
-DeliveryLine 테이블에 납품 상세를 삽입하는 메서드입니다.
+#### 5. `InventoryRepository` 클래스
 
-DeliveryID, POID, LineNo가 복합 기본키를 구성합니다. receivedQty는 실제 입고된 수량이며, 과제 요구사항에 따라 발주 수량의 50%가 자동 계산되어 전달됩니다. inspectionResult는 검수 결과를 기록합니다.
+**파일:** `hw10/repository/InventoryRepository.java`  
+**패키지:** `hw10.repository`  
+**접근 제어자:** `public final class`  
+**역할:** 창고 재고(Inventory) 데이터를 관리하는 리포지토리입니다. UPSERT 기능을 제공합니다.
 
-#### 과제 요구사항 충족
-
-- **[기능 2]** Delivery에 레코드 1건을 삽입합니다 (delivery_date = 오늘, status = '정상입고').
-- **[기능 2]** DeliveryLine에 각 항목의 delivered_qty 일부(50%)를 삽입합니다.
-
----
-
-### 2.3.10 InventoryRepository (재고 DAO)
-
-**파일 위치:** `hw10/dao/InventoryRepository.java`
-
-InventoryRepository 클래스는 재고(Inventory) 테이블에 대한 UPSERT(INSERT 또는 UPDATE) 작업을 담당합니다. PostgreSQL의 ON CONFLICT DO UPDATE 문법을 활용합니다.
-
-#### 메서드 상세 설명
+##### 메서드 상세 설명
 
 **`public void addInventory(Connection conn, int warehouseId, int partId, int deltaQty) throws SQLException`**
-
-해당 창고·부품 조합이 없으면 INSERT, 있으면 수량을 UPDATE하는 메서드입니다.
-
-SQL 문은 다음과 같은 구조를 가집니다:
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `int warehouseId`: 창고 ID
+  - `int partId`: 부품 ID
+  - `int deltaQty`: 증가할 수량 (음수면 차감)
+- **반환값:** 없음 (void)
+- **SQL 쿼리:**
 ```sql
 INSERT INTO Inventory(WarehouseID, PartID, Quantity)
 VALUES (?, ?, ?)
 ON CONFLICT (WarehouseID, PartID)
 DO UPDATE SET Quantity = Inventory.Quantity + EXCLUDED.Quantity
 ```
+- **동작 방식:**
+  1. PostgreSQL의 `ON CONFLICT` 구문을 사용하여 UPSERT를 구현합니다.
+  2. `(WarehouseID, PartID)` 조합이 기본키 또는 유니크 제약조건을 가정합니다.
+  3. 레코드가 없으면: `INSERT`로 새 레코드를 생성하고 `Quantity = deltaQty`로 설정합니다.
+  4. 레코드가 있으면: `UPDATE`로 기존 `Quantity`에 `deltaQty`를 더합니다.
+  5. `EXCLUDED`는 INSERT 시도한 값을 참조하는 키워드입니다.
+- **비즈니스 로직:** [기능 2] 요구사항에 따라 납품 시 창고 재고를 자동으로 증가시킵니다. 기존 재고가 없으면 신규 생성, 있으면 수량을 더합니다.
+- **트랜잭션 처리:** 트랜잭션 내에서 호출되므로 롤백 시 재고 변경도 함께 취소됩니다.
 
-먼저 INSERT를 시도합니다. Inventory 테이블은 (WarehouseID, PartID)에 UNIQUE 제약조건이 있으므로, 같은 창고-부품 조합이 이미 존재하면 CONFLICT가 발생합니다.
+#### 6. `SequenceGenerator` 클래스
 
-ON CONFLICT (WarehouseID, PartID) 절은 이 UNIQUE 제약조건에서 충돌이 발생했을 때의 동작을 정의합니다. DO UPDATE SET 절에서 Inventory.Quantity는 기존 레코드의 수량이고, EXCLUDED.Quantity는 INSERT 하려던 값(deltaQty)입니다. 따라서 기존 수량에 추가 수량을 더한 결과로 UPDATE됩니다.
+**파일:** `hw10/repository/SequenceGenerator.java`  
+**패키지:** `hw10.repository`  
+**접근 제어자:** `public final class`  
+**역할:** 데이터베이스 테이블의 기본키(Primary Key) 값을 자동 생성하는 유틸리티 클래스입니다. 시퀀스 대신 MAX 값 기반 ID 생성을 사용합니다.
 
-이 UPSERT 연산은 원자적으로 실행되므로 동시성 문제 없이 안전하게 재고를 증가시킬 수 있습니다.
+##### 클래스 구조 및 상수
 
-#### 과제 요구사항 충족
+```java
+private static final Set<String> ALLOWED = Set.of(
+    "PurchaseOrder.POID",
+    "Delivery.DeliveryID",
+    "CarbonEmissionRecord.RecordID"
+);
+```
 
-- **[기능 2]** 창고·부품별 Inventory 수량을 증가시킵니다.
-- **[기능 2]** 기존 레코드가 없으면 신규 INSERT, 있으면 UPDATE합니다.
+허용된 테이블.컬럼 조합만 ID 생성을 허용하여 SQL 인젝션을 방지합니다.
 
----
-
-### 2.3.11 SequenceGenerator (PK 생성기)
-
-**파일 위치:** `hw10/dao/SequenceGenerator.java`
-
-SequenceGenerator 클래스는 스키마에 SEQUENCE/SERIAL이 없는 테이블에 대해 새 PK 값을 생성합니다. MAX(id)+1 방식을 사용합니다.
-
-#### 필드 설명
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `ALLOWED` | Set<String> | 허용된 테이블.컬럼 목록 (SQL 인젝션 방지) |
-
-ALLOWED Set에는 "PurchaseOrder.POID", "Delivery.DeliveryID", "CarbonEmissionRecord.RecordID" 세 가지가 등록되어 있습니다.
-
-#### 메서드 상세 설명
+##### 메서드 상세 설명
 
 **`public int nextId(Connection conn, String tableDotCol) throws SQLException`**
-
-지정된 테이블.컬럼의 MAX 값 + 1을 반환하는 메서드입니다.
-
-먼저 tableDotCol이 ALLOWED Set에 포함되어 있는지 확인합니다. 포함되어 있지 않으면 IllegalArgumentException을 발생시킵니다. 이는 SQL 인젝션 공격을 방지하기 위한 화이트리스트 방식의 보안 조치입니다.
-
-tableDotCol을 점(.)으로 분리하여 테이블명과 컬럼명을 추출합니다. SQL 문 SELECT COALESCE(MAX(col), 0) + 1 AS next_id FROM table을 실행하여 결과를 반환합니다. COALESCE는 테이블이 비어있어 MAX가 NULL인 경우 0을 반환하도록 하여, 첫 번째 레코드의 ID가 1이 되도록 합니다.
-
-주의: 이 방식은 동시에 여러 트랜잭션이 nextId()를 호출하면 같은 ID를 받을 수 있어 동시성에 취약합니다. 실무에서는 PostgreSQL의 SEQUENCE를 사용하는 것이 권장되지만, 과제 데모 수준에서는 이 방식으로 충분합니다.
-
----
-
-### 2.3.12 OrderTransactionService (트랜잭션 서비스)
-
-**파일 위치:** `hw10/service/OrderTransactionService.java`
-
-OrderTransactionService 클래스는 기능 2(발주 등록 처리)의 핵심 비즈니스 로직을 담당합니다. 여러 DAO를 조합하여 하나의 트랜잭션으로 묶어 처리하며, 과제에서 요구하는 모든 트랜잭션 관련 요구사항을 구현합니다.
-
-#### 내부 record 정의
-
-| record | 필드 | 설명 |
-|--------|------|------|
-| `OrderLineInput` | partId, quantity, unitPrice | 발주 항목 입력 데이터 |
-| `TransactionResult` | poid, deliveryId | 트랜잭션 결과 (생성된 ID들) |
-
-#### 필드 설명
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `db` | DatabaseConnection | DB 연결 객체 |
-| `sequenceGenerator` | SequenceGenerator | PK 생성기 |
-| `orderRepository` | OrderRepository | 발주 DAO |
-| `deliveryRepository` | DeliveryRepository | 납품 DAO |
-| `inventoryRepository` | InventoryRepository | 재고 DAO |
-
-#### 메서드 상세 설명
-
-**`public TransactionResult createOrderWithInitialDelivery(int projectId, int supplierId, String engineerName, List<OrderLineInput> lines, int warehouseId, String transportMode, Double distanceKm) throws Exception`**
-
-발주서 생성, 발주항목 생성, 납품 생성, 납품상세 생성, 재고 반영을 하나의 트랜잭션으로 처리하는 메서드입니다.
-
-메서드는 최대 3회까지 재시도하는 루프로 시작합니다. 이는 과제 요구사항의 "교착상태가 표시되어 트랜잭션이 실패하면 트랜잭션을 다시 시도한다"를 충족합니다.
-
-각 시도에서 먼저 db.openConnection()으로 새 Connection을 열고, setAutoCommit(false)를 호출하여 트랜잭션을 시작합니다. JDBC에서 auto-commit을 끄면 명시적으로 commit() 또는 rollback()을 호출할 때까지 모든 SQL이 하나의 트랜잭션으로 묶입니다.
-
-setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED)를 호출하여 트랜잭션 격리 수준을 READ_COMMITTED로 설정합니다. 이 격리 수준에서는 커밋된 데이터만 읽을 수 있어 dirty read가 방지됩니다. 이는 과제 요구사항의 "트랜잭션 isolation level을 적절하게 설정한다"를 충족합니다.
-
-트랜잭션 내에서는 다음 순서로 작업을 수행합니다:
-
-1. **발주서 생성**: SequenceGenerator로 새 POID를 생성하고 OrderRepository.insertPurchaseOrder()로 발주서를 삽입합니다. 상태는 '요청'으로 설정합니다.
-
-2. **발주 항목 생성**: 각 발주 항목에 대해 OrderRepository.insertPurchaseOrderLine()을 호출합니다. lineNo는 1부터 순차적으로 증가합니다.
-
-3. **초기 납품 생성**: SequenceGenerator로 새 DeliveryID를 생성하고 DeliveryRepository.insertDelivery()로 납품 기록을 삽입합니다. 날짜는 오늘, 상태는 '정상입고'입니다.
-
-4. **납품 상세 + 재고 반영**: 각 발주 항목에 대해 발주 수량의 50%(올림)를 계산하여 DeliveryLine을 삽입하고, InventoryRepository.addInventory()로 재고를 증가시킵니다. 50% 올림 계산은 (quantity + 1) / 2로 구현합니다.
-
-모든 작업이 성공하면 conn.commit()을 호출하여 트랜잭션을 커밋하고 결과를 반환합니다. Logger.info()로 트랜잭션 커밋 로그를 기록합니다.
-
-중간에 SQLException이 발생하면 catch 블록에서 conn.rollback()을 호출하여 모든 변경사항을 취소합니다. Logger.info()로 트랜잭션 롤백 로그를 기록합니다.
-
-교착상태(SQLSTATE 40P01) 발생 시에는 즉시 예외를 던지지 않고 루프를 계속하여 재시도합니다. Thread.sleep()으로 짧은 대기 시간을 두어 교착상태가 해소될 시간을 줍니다. 대기 시간은 시도 횟수에 비례하여 증가합니다(200ms, 400ms, 600ms).
-
-#### 과제 요구사항 충족
-
-- **[기능 2]** 전 과정을 하나의 트랜잭션으로 묶습니다.
-- **[기능 2]** 중간 오류 발생 시 전체 작업을 롤백하고 "발주 등록 실패" 메시지를 출력합니다.
-- **[기능 2]** 정상 완료 시 커밋하고 "발주 등록 완료" 메시지를 출력합니다.
-- **[기능 2]** 명시적으로 setAutoCommit(false)/commit()/rollback()을 사용합니다.
-- **[구현 참고사항 2]** 트랜잭션 isolation level을 READ_COMMITTED로 설정합니다.
-- **[구현 참고사항 3]** 교착상태 발생 시 트랜잭션을 재시도합니다.
-- **[기능 4]** 트랜잭션 시작/커밋/롤백 로그를 기록합니다.
+- **매개변수:**
+  - `Connection conn`: 데이터베이스 연결 객체
+  - `String tableDotCol`: "테이블명.컬럼명" 형식의 문자열 (예: "PurchaseOrder.POID")
+- **반환값:** `int` - 다음 ID 값
+- **동작 방식:**
+  1. **보안 검증:**
+     - `ALLOWED.contains(tableDotCol)`로 허용된 컬럼인지 확인합니다.
+     - 허용되지 않은 경우 `IllegalArgumentException`을 발생시킵니다.
+     - SQL 인젝션 공격을 방지합니다.
+  
+  2. **테이블 및 컬럼 분리:**
+     - `tableDotCol.split("\\.")`로 점(.)을 기준으로 분리합니다.
+     - `parts[0]`은 테이블명, `parts[1]`은 컬럼명입니다.
+  
+  3. **동적 SQL 쿼리 생성:**
+     - 쿼리: `SELECT COALESCE(MAX(컬럼명), 0) + 1 AS next_id FROM 테이블명`
+     - `COALESCE(MAX(...), 0)`로 NULL 값을 0으로 처리합니다 (테이블이 비어있는 경우).
+     - `+ 1`로 다음 ID를 계산합니다.
+  
+  4. **쿼리 실행:**
+     - `PreparedStatement`를 사용하지만 테이블명과 컬럼명은 동적으로 구성됩니다.
+     - 허용 목록 검증으로 안전성을 보장합니다.
+     - `ResultSet`에서 `next_id` 값을 추출하여 반환합니다.
+  
+- **주의사항:**
+  - 동시성 환경에서 두 트랜잭션이 동시에 같은 ID를 생성할 수 있습니다.
+  - 트랜잭션 격리 수준(READ_COMMITTED)과 재시도 로직으로 이를 완화합니다.
+  - 프로덕션 환경에서는 시퀀스(SEQUENCE) 사용을 권장합니다.
+  
+- **사용 예시:**
+```java
+int poid = sequenceGenerator.nextId(conn, "PurchaseOrder.POID");
+// 결과: 기존 최대값이 100이면 101을 반환
+```
 
 ---
 
-### (변경 가능) 2.3.13 ConsoleMenu (메인 메뉴 UI)
+### 2.2.7 `hw10.dto` 패키지 (데이터 객체)
 
-**파일 위치:** `hw10/ui/ConsoleMenu.java`
+계층 간 데이터 전송을 위한 불변 객체(`record`)들입니다. Java 14+의 `record` 기능을 사용하여 간결하고 안전한 DTO를 구현했습니다.
 
-> ⚠️ **변경 가능**: 이 클래스는 콘솔 기반 UI입니다. 웹(Spring/Flask) 또는 GUI로 교체될 수 있습니다.
+#### 1. `MainDto` 클래스
 
-ConsoleMenu 클래스는 콘솔 기반의 메인 메뉴 UI를 제공합니다. 무한 루프에서 사용자 입력을 받아 각 기능으로 분기합니다.
+**파일:** `hw10/dto/MainDto.java`  
+**패키지:** `hw10.dto`  
+**역할:** 메인 대시보드용 데이터 전송 객체입니다.
 
-#### 필드 설명
+##### 내부 레코드 클래스
 
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `db` | DatabaseConnection | DB 연결 객체 |
-| `sc` | Scanner | 콘솔 입력용 Scanner |
+**`public record MainSummary(int activeProjects, double carbonReduction, int delayedDeliveries, String avgEsgGrade)`**
+- **필드:**
+  - `activeProjects`: 활성 프로젝트 수 (int)
+  - `carbonReduction`: 탄소 감축량 (double, kg CO₂e)
+  - `delayedDeliveries`: 지연 배송 건수 (int)
+  - `avgEsgGrade`: 평균 ESG 등급 (String, "A", "B", "C", "D")
+- **용도:** 메인 대시보드 상단의 4개 요약 카드 데이터를 전송합니다.
+- **JSON 직렬화:** Spring이 자동으로 JSON으로 변환하여 HTTP 응답에 포함합니다.
 
-#### 메서드 상세 설명
+#### 2. `OrderDto` 클래스
 
-**`public ConsoleMenu(DatabaseConnection db)`**
+**파일:** `hw10/dto/OrderDto.java`  
+**패키지:** `hw10.dto`  
+**역할:** 발주 관련 데이터 전송 객체입니다.
 
-생성자는 DatabaseConnection 객체를 받아 저장합니다. Scanner는 System.in으로 초기화하여 표준 입력에서 읽습니다.
+##### 내부 레코드 클래스
 
-**`public void run()`**
+**`public record OrderRequest(int projectId, int supplierId, String engineerName, String status, List<OrderLineInput> lines, int warehouseId, String transportMode, Double distanceKm)`**
+- **필드:**
+  - `projectId`: 프로젝트 ID
+  - `supplierId`: 공급업체 ID
+  - `engineerName`: 담당 엔지니어 이름
+  - `status`: 발주 상태
+  - `lines`: 발주 품목 리스트
+  - `warehouseId`: 입고 창고 ID
+  - `transportMode`: 운송 수단
+  - `distanceKm`: 운송 거리 (null 가능)
+- **용도:** 발주 등록 API의 요청 본문으로 사용됩니다.
 
-메뉴를 출력하고 사용자 선택에 따라 기능을 실행하는 메서드입니다.
+**`public record OrderLineInput(int partId, int quantity, double unitPrice)`**
+- 발주 품목 입력 데이터입니다.
+- **필드:**
+  - `partId`: 부품 ID
+  - `quantity`: 수량
+  - `unitPrice`: 단가
 
-무한 루프(while(true)) 안에서 동작합니다. 매 반복마다 메뉴 옵션(1: 프로젝트 대시보드, 2: 발주 등록, 3: 공급업체 리포트, 0: 종료)을 출력하고 Scanner로 사용자 입력을 받습니다.
+**`public record OrderResponse(int poid, int deliveryId, String message)`**
+- 발주 등록 결과 응답입니다.
+- **필드:**
+  - `poid`: 생성된 발주서 ID
+  - `deliveryId`: 생성된 납품서 ID
+  - `message`: 결과 메시지
 
-switch expression으로 입력값에 따라 분기합니다. "1"이면 ProjectDashboard.run(), "2"이면 OrderRegistration.run(), "3"이면 SupplierReport.run()을 호출합니다. "0"이면 return 문으로 메서드를 종료합니다. 그 외 입력은 안내 메시지를 출력하고 루프를 계속합니다.
+**`public record SupplierOption(int supplierId, String name, String country)`**
+- 공급업체 드롭다운 옵션입니다.
 
-try-catch 블록으로 각 기능 실행을 감싸서 예외가 발생해도 프로그램이 중단되지 않도록 합니다. SQLException 발생 시 ErrorHandler.toUserMessage()를 통해 사용자 친화적 메시지를 출력합니다. 모든 예외에 대해 Logger.error()로 상세 오류 정보를 기록합니다.
+**`public record PartOption(int partId, String name, String unit, double unitPrice)`**
+- 부품 검색 결과입니다.
+- `unitPrice`: 평균 단가
+
+**`public record WarehouseOption(int warehouseId, String name, String location)`**
+- 창고 드롭다운 옵션입니다.
+
+**`public record InventoryItem(int partId, String partName, String unit, int quantity)`**
+- 창고 재고 항목입니다.
+- `partName`: 부품명 (Part 테이블과 조인하여 조회)
+
+#### 3. `ProjectDto` 클래스
+
+**파일:** `hw10/dto/ProjectDto.java`  
+**패키지:** `hw10.dto`  
+**역할:** 프로젝트 관련 데이터 전송 객체입니다.
+
+##### 내부 레코드 클래스
+
+**`public record ProjectBasic(int projectId, String shipName, String shipType, java.sql.Date contractDate, java.sql.Date deliveryDueDate, String status)`**
+- 프로젝트 기본 정보입니다.
+- **용도:** 프로젝트 상세 조회 및 대시보드에 사용됩니다.
+
+**`public record SupplierAmount(int supplierId, String name, double amount)`**
+- 공급업체별 발주 금액 통계입니다.
+- **용도:** 대시보드에서 상위 공급업체를 표시하는 데 사용됩니다.
+
+**`public record ProjectSearchItem(int projectId, String shipName, String shipType, String status)`**
+- 프로젝트 검색 결과 항목입니다.
+- **용도:** 프로젝트 검색 및 드롭다운에 사용됩니다.
+
+**`public record DashboardStats(ProjectBasic project, double totalOrderAmount, double totalEmission, double transportEmission, double storageEmission, double processingEmission, List<SupplierAmount> topSuppliers, Double carbonIntensity, Double shipCII)`**
+- 프로젝트 대시보드 통계 데이터입니다.
+- **필드:**
+  - `project`: 프로젝트 기본 정보
+  - `totalOrderAmount`: 총 발주 금액
+  - `totalEmission`: 전체 탄소 배출량
+  - `transportEmission`: 운송 탄소 배출량
+  - `storageEmission`: 보관 탄소 배출량
+  - `processingEmission`: 가공/생산 탄소 배출량
+  - `topSuppliers`: 상위 3개 공급업체 리스트
+  - `carbonIntensity`: 탄소 집약도 (null 가능)
+  - `shipCII`: 선박 CII 지표 (현재 null)
+- **용도:** [기능 1] 프로젝트 대시보드 리포트에 사용됩니다.
+
+#### 4. `SupplierDto` 클래스
+
+**파일:** `hw10/dto/SupplierDto.java`  
+**패키지:** `hw10.dto`  
+**역할:** 공급업체 관련 데이터 전송 객체입니다.
+
+##### 내부 레코드 클래스
+
+**`public record SupplierRow(int supplierId, String name, String country, String esgGrade, double totalOrderAmount, int delayedDeliveries, int totalDeliveries, double delayRatio)`**
+- 공급업체 목록 행 데이터입니다.
+- **필드:**
+  - `delayRatio`: 지연 납품 비율 (0.0 ~ 1.0)
+- **용도:** [기능 3] 공급업체 ESG 및 지연 납품 리포트에 사용됩니다.
+
+**`public record SupplierPoRow(int poid, java.sql.Date orderDate, String status, boolean delayed)`**
+- 공급업체의 발주 이력입니다.
+- `delayed`: 지연 여부 (boolean)
+
+**`public record SupplierDetail(SupplierRow supplier, List<SupplierPoRow> recentOrders)`**
+- 공급업체 상세 정보입니다.
+- **필드:**
+  - `supplier`: 공급업체 기본 정보 및 통계
+  - `recentOrders`: 최근 발주 내역 리스트 (최대 5개)
+- **용도:** [기능 3] 공급업체 상세 화면에 사용됩니다.
 
 ---
 
-### (변경 가능) 2.3.14 ProjectDashboard (기능 1 UI)
+### 2.2.8 `hw10.exception` 및 `util`
 
-**파일 위치:** `hw10/ui/ProjectDashboard.java`
+#### 1. `GlobalExceptionHandler` 클래스
 
-> ⚠️ **변경 가능**: 이 클래스는 콘솔 기반 UI입니다. 웹 또는 GUI로 교체될 수 있습니다.
+**파일:** `hw10/exception/GlobalExceptionHandler.java`  
+**패키지:** `hw10.exception`  
+**어노테이션:** `@RestControllerAdvice`  
+**역할:** 애플리케이션 전역에서 발생하는 예외를 처리하는 예외 핸들러입니다. [기능 4] 요구사항에 따라 사용자에게 이해 가능한 에러 메시지를 제공합니다.
 
-ProjectDashboard 클래스는 기능 1(프로젝트 대시보드)의 사용자 인터페이스를 담당합니다.
+##### 클래스 구조
 
-#### 메서드 상세 설명
+**내부 레코드 클래스:**
+```java
+public record ErrorResponse(String code, String message)
+```
+- 에러 응답 데이터를 담는 불변 레코드입니다.
+- `code`: 에러 코드 (예: "DATABASE_ERROR")
+- `message`: 사용자에게 표시할 에러 메시지
 
-**`public static void run(DatabaseConnection db, Scanner sc) throws Exception`**
+##### 메서드 상세 설명
 
-프로젝트ID/선박명을 입력받고, ProjectRepository를 통해 데이터를 조회하여 화면에 출력하는 메서드입니다.
+**`@ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e)`**
+- **처리 예외:** `IllegalArgumentException`
+- **반환값:** `ResponseEntity<ErrorResponse>` - HTTP 400 Bad Request
+- **동작 방식:**
+  1. 잘못된 요청 파라미터로 인한 예외를 처리합니다.
+  2. `Logger.warn("잘못된 요청 파라미터: " + e.getMessage())`로 경고 로그를 기록합니다.
+  3. `ErrorResponse` 객체를 생성하여 HTTP 400 상태 코드와 함께 반환합니다.
+- **용도:** 클라이언트가 잘못된 데이터를 전송한 경우를 처리합니다.
 
-먼저 InputHelper.readLine()으로 프로젝트ID 또는 선박명을 입력받습니다. 빈 입력이면 안내 메시지를 출력하고 종료합니다.
+**`@ExceptionHandler(SQLException.class) public ResponseEntity<ErrorResponse> handleSQLException(SQLException e)`**
+- **처리 예외:** `SQLException`
+- **반환값:** `ResponseEntity<ErrorResponse>` - HTTP 500 Internal Server Error
+- **동작 방식:**
+  1. 데이터베이스 관련 예외를 처리합니다.
+  2. `Logger.error("데이터베이스 오류 발생", e)`로 에러 로그를 기록합니다.
+     - 개발용 상세 내용(스택 트레이스)은 로그에 남깁니다.
+  3. 기본 메시지: "데이터베이스 오류가 발생했습니다."
+  4. 예외 메시지에 "롤백", "Rollback", "rollback", "실패" 키워드가 포함된 경우:
+     - 메시지를 "트랜잭션 롤백 알림: [에러 메시지]"로 변경합니다.
+     - 사용자에게 롤백 사실을 명확히 알립니다.
+  5. HTTP 500 상태 코드와 함께 `ErrorResponse`를 반환합니다.
+- **비즈니스 로직:** [기능 4] 요구사항에 따라 DB 접속 실패, 쿼리 오류, 제약조건 위반 상황에서 프로그램이 중단되지 않고 사용자에게 이해 가능한 메시지를 제공합니다.
 
-입력값이 숫자로만 구성되어 있는지 InputHelper.isAllDigits()로 확인합니다. 숫자면 바로 ProjectID로 사용하고, 아니면 선박명으로 검색합니다.
+**`@ExceptionHandler(NoResourceFoundException.class) public ResponseEntity<Void> handleNoResourceFound(NoResourceFoundException e)`**
+- **처리 예외:** `NoResourceFoundException`
+- **반환값:** `ResponseEntity<Void>` - HTTP 404 Not Found
+- **동작 방식:**
+  1. 정적 리소스를 찾을 수 없는 경우를 처리합니다.
+  2. 특정 리소스 경로는 로그를 남기지 않습니다:
+     - `/favicon.ico`, `*.ico`: 파비콘 요청
+     - `/.well-known/*`: 웹 표준 리소스
+     - `chrome.devtools`, `appspecific`: 브라우저 개발자 도구 리소스
+     - `/robots.txt`, `/sitemap.xml`: 검색 엔진 리소스
+     - `/apple-touch-icon*`: iOS 아이콘
+  3. 그 외의 리소스는 `Logger.warn()`으로 경고 로그를 기록합니다.
+  4. HTTP 404 상태 코드를 반환합니다.
+- **용도:** 불필요한 404 에러 로그를 줄이고 중요한 리소스 누락만 로깅합니다.
 
-선박명 검색의 경우 searchProjectsByShipName()으로 최대 10개의 결과를 조회하여 보여주고, 사용자에게 조회할 ProjectID를 다시 입력받습니다. 검색 결과가 없으면 안내 메시지를 출력하고 종료합니다.
+**`@ExceptionHandler(Exception.class) public ResponseEntity<ErrorResponse> handleException(Exception e)`**
+- **처리 예외:** `Exception` (모든 예외의 최상위 클래스)
+- **반환값:** `ResponseEntity<ErrorResponse>` - HTTP 500 Internal Server Error
+- **동작 방식:**
+  1. 위에서 처리되지 않은 모든 예외를 처리합니다 (fallback).
+  2. `Logger.error("서버 오류 발생", e)`로 에러 로그를 기록합니다.
+  3. 기본 메시지: "서버 오류가 발생했습니다."
+  4. 예외 메시지가 있으면 "API 오류 (트랜잭션 롤백됨): [에러 메시지]"로 변경합니다.
+  5. HTTP 500 상태 코드와 함께 `ErrorResponse`를 반환합니다.
+- **용도:** 예상치 못한 예외를 처리하여 애플리케이션이 중단되지 않도록 보장합니다.
 
-ProjectID가 확정되면 순차적으로 데이터를 조회합니다: findProjectById()로 기본 정보, totalOrderAmount()로 총 발주 금액, topSuppliersByAmount()로 상위 3개 공급업체, emissionSumByType()으로 운송/보관 탄소배출, emissionSumTotal()로 전체 탄소배출.
+#### 2. `Logger` 클래스
 
-마지막으로 탄소 집약도 지표를 계산합니다. 공식은 totalEmission / (totalCost / 1_000_000.0)입니다. 총 발주 금액이 0인 경우 0으로 나누기 오류를 방지하기 위해 "N/A"를 출력합니다.
+**파일:** `hw10/util/Logger.java`  
+**패키지:** `hw10.util`  
+**접근 제어자:** `public final class`  
+**역할:** 애플리케이션 로깅을 관리하는 유틸리티 클래스입니다. [기능 4] 요구사항에 따라 파일 로그와 콘솔 로그를 동시에 출력합니다.
 
-**`private static String nvl(Object o)`**
+##### 클래스 구조 및 필드
 
-null이면 "-"를, 아니면 String.valueOf(o)를 반환하는 헬퍼 메서드입니다. 출력할 때 null 대신 보기 좋은 문자열을 표시하기 위해 사용합니다.
+```java
+private static final java.util.logging.Logger LOGGER = 
+    java.util.logging.Logger.getLogger("scm");
+private static boolean initialized = false;
+```
+
+- `LOGGER`: Java 표준 로깅 API의 Logger 인스턴스
+- `initialized`: 초기화 여부를 추적하는 플래그 (중복 초기화 방지)
+
+##### 생성자
+
+**`private Logger()`**
+- **접근 제어자:** `private` (인스턴스화 방지)
+- **용도:** 유틸리티 클래스이므로 인스턴스를 생성할 수 없도록 합니다.
+
+##### 메서드 상세 설명
+
+**`public static void init()`**
+- **접근 제어자:** `public static`
+- **매개변수:** 없음
+- **반환값:** 없음 (void)
+- **동작 방식:**
+  1. **중복 초기화 방지:**
+     - `initialized` 플래그를 확인하여 이미 초기화되었으면 즉시 반환합니다.
+     - `initialized = true`로 설정합니다.
+  
+  2. **로거 설정:**
+     - `LOGGER.setUseParentHandlers(false)`: 부모 핸들러를 비활성화하여 중복 로그를 방지합니다.
+     - `LOGGER.setLevel(Level.INFO)`: 로그 레벨을 INFO로 설정합니다.
+  
+  3. **커스텀 포맷터 생성:**
+     - `Formatter`를 구현하여 로그 포맷을 정의합니다.
+     - 포맷: `[YYYY-MM-DD HH:MM:SS] [LEVEL] 메시지`
+     - 예외가 있으면 예외 정보와 스택 트레이스 첫 줄을 추가합니다.
+  
+  4. **콘솔 핸들러 설정:**
+     - `ConsoleHandler`를 생성하고 INFO 레벨로 설정합니다.
+     - 커스텀 포맷터를 적용합니다.
+     - `LOGGER.addHandler(ch)`로 핸들러를 등록합니다.
+  
+  5. **파일 핸들러 설정:**
+     - `Files.createDirectories(Path.of("logs"))`로 로그 디렉토리를 생성합니다.
+     - `FileHandler("logs/app.log", true)`를 생성합니다.
+       - `true`: 이어쓰기 모드 (기존 파일에 추가)
+     - INFO 레벨로 설정하고 커스텀 포맷터를 적용합니다.
+     - `LOGGER.addHandler(fh)`로 핸들러를 등록합니다.
+     - `IOException` 발생 시 경고 로그만 기록하고 계속 진행합니다.
+  
+- **비즈니스 로직:** [기능 4] 요구사항에 따라 애플리케이션 시작/종료, DB 접속, 트랜잭션, 오류를 로그로 기록합니다.
+
+**`public static void info(String msg)`**
+- **접근 제어자:** `public static`
+- **매개변수:** `String msg` - 로그 메시지
+- **반환값:** 없음 (void)
+- **동작 방식:**
+  1. `LOGGER.info(msg)`를 호출하여 INFO 레벨 로그를 기록합니다.
+  2. 콘솔과 파일에 동시에 출력됩니다.
+- **용도:** 일반 정보 메시지를 기록합니다 (예: "애플리케이션 시작", "트랜잭션 커밋 완료").
+
+**`public static void warn(String msg)`**
+- **접근 제어자:** `public static`
+- **매개변수:** `String msg` - 경고 메시지
+- **반환값:** 없음 (void)
+- **동작 방식:**
+  1. `LOGGER.warning(msg)`를 호출하여 WARNING 레벨 로그를 기록합니다.
+  2. 콘솔과 파일에 동시에 출력됩니다.
+- **용도:** 경고 메시지를 기록합니다 (예: "트랜잭션 롤백", "교착상태 감지").
+
+**`public static void error(String msg, Throwable t)`**
+- **접근 제어자:** `public static`
+- **매개변수:**
+  - `String msg` - 에러 메시지
+  - `Throwable t` - 예외 객체 (null 가능)
+- **반환값:** 없음 (void)
+- **동작 방식:**
+  1. `LOGGER.log(Level.SEVERE, msg, t)`를 호출하여 SEVERE 레벨 로그를 기록합니다.
+  2. 예외 객체가 있으면 스택 트레이스도 함께 기록됩니다.
+  3. 콘솔과 파일에 동시에 출력됩니다.
+- **용도:** 심각한 에러를 기록합니다 (예: "데이터베이스 오류 발생", "롤백 실패").
 
 ---
 
-### (변경 가능) 2.3.15 OrderRegistration (기능 2 UI)
+## 2.3 클래스 간 관계 및 데이터 흐름
 
-**파일 위치:** `hw10/ui/OrderRegistration.java`
+### 2.3.1 계층 구조
 
-> ⚠️ **변경 가능**: 이 클래스는 콘솔 기반 UI입니다. 웹 또는 GUI로 교체될 수 있습니다.
+애플리케이션은 **계층형 아키텍처(Layered Architecture)**를 따릅니다:
 
-OrderRegistration 클래스는 기능 2(발주 및 납품 관리)의 사용자 인터페이스를 담당합니다.
+1. **Controller 계층**: HTTP 요청을 받아 Service 계층을 호출하고 JSON 응답을 반환합니다.
+2. **Service 계층**: 비즈니스 로직을 처리하고 트랜잭션을 관리합니다. Repository 계층을 호출합니다.
+3. **Repository 계층**: 데이터베이스 쿼리를 실행하고 결과를 도메인 객체로 변환합니다.
+4. **DTO 계층**: 계층 간 데이터 전송을 위한 불변 객체입니다.
 
-#### 메서드 상세 설명
+### 2.3.2 의존성 주입
 
-**`public static void run(DatabaseConnection db, Scanner sc) throws Exception`**
+Spring Framework의 **의존성 주입(Dependency Injection)**을 사용하여 느슨한 결합을 구현했습니다:
 
-발주 정보를 입력받고 OrderTransactionService를 호출하여 트랜잭션을 실행하는 메서드입니다.
+- 모든 Controller는 생성자 기반 주입을 통해 Service 인스턴스를 받습니다.
+- 모든 Service는 생성자 기반 주입을 통해 DataSource 인스턴스를 받습니다.
+- Repository는 Service에서 직접 인스턴스화됩니다 (향후 Spring Bean으로 전환 가능).
 
-단계별로 사용자 입력을 받습니다. InputHelper.readInt()로 ProjectID와 SupplierID를 필수로 입력받고, InputHelper.readLine()으로 담당 엔지니어명을 선택적으로 입력받습니다.
+### 2.3.3 트랜잭션 처리 흐름
 
-발주 항목 개수를 입력받고, 각 항목에 대해 PartID, Quantity, UnitPrice를 반복적으로 입력받습니다. 수량은 1 이상, 단가는 0 이상이어야 하며, 조건을 만족하지 않으면 안내 메시지를 출력하고 종료합니다.
+[기능 2] 발주 등록 트랜잭션의 실행 흐름:
 
-입고할 창고ID와 운송 정보(운송 수단, 거리)를 입력받습니다. 운송 수단은 빈 입력 시 기본값 "트럭"을 사용합니다.
+```
+1. OrderController.createOrder()
+   ↓
+2. OrderService.createOrder()
+   ↓
+3. OrderTransactionService.createOrderWithInitialDelivery()
+   ├─ Connection 획득
+   ├─ setAutoCommit(false) → 트랜잭션 시작
+   ├─ setTransactionIsolation(READ_COMMITTED)
+   ├─ SequenceGenerator.nextId() → POID 생성
+   ├─ OrderRepository.insertPurchaseOrder() → 발주서 삽입
+   ├─ OrderRepository.insertPurchaseOrderLine() → 발주 품목 삽입 (반복)
+   ├─ SequenceGenerator.nextId() → DeliveryID 생성
+   ├─ DeliveryRepository.insertDelivery() → 납품서 삽입
+   ├─ DeliveryRepository.insertDeliveryLine() → 납품 품목 삽입 (반복)
+   ├─ InventoryRepository.addInventory() → 재고 반영 (반복)
+   ├─ commit() → 커밋 (성공 시)
+   └─ rollback() → 롤백 (실패 시)
+```
 
-모든 입력이 완료되면 OrderTransactionService.createOrderWithInitialDelivery()를 호출합니다. 성공하면 생성된 POID와 DeliveryID를 출력합니다. SQLException 발생 시 ErrorHandler.toUserMessage()로 사용자 친화적 메시지를 출력하고, 모든 예외에 대해 Logger.error()로 상세 오류를 기록합니다.
+### 2.3.4 예외 처리 흐름
 
----
+모든 예외는 `GlobalExceptionHandler`에서 처리됩니다:
 
-### (변경 가능) 2.3.16 SupplierReport (기능 3 UI)
-
-**파일 위치:** `hw10/ui/SupplierReport.java`
-
-> ⚠️ **변경 가능**: 이 클래스는 콘솔 기반 UI입니다. 웹 또는 GUI로 교체될 수 있습니다.
-
-SupplierReport 클래스는 기능 3(공급업체 ESG 및 지연 납품 리포트)의 사용자 인터페이스를 담당합니다.
-
-#### 메서드 상세 설명
-
-**`public static void run(DatabaseConnection db, Scanner sc) throws Exception`**
-
-ESG 등급/지연비율 필터를 입력받고 공급업체 목록을 출력하는 메서드입니다.
-
-InputHelper.readCsvTokensUpper()로 ESG 등급 필터를 입력받습니다. 콤마로 구분하여 여러 개를 입력할 수 있습니다(예: "A,B"). InputHelper.readDoubleOptional()로 지연 비율 상한/하한을 퍼센트 단위로 입력받고, 내부적으로 0~1 비율로 변환합니다.
-
-SupplierRepository.listSuppliers()로 필터 조건에 맞는 공급업체 목록을 조회합니다. 결과가 없으면 안내 메시지를 출력하고 종료합니다.
-
-표 형태로 포맷팅하여 출력합니다. 지연 비율은 "33.3% (1/3)" 형태로 비율과 건수를 함께 표시합니다.
-
-목록 출력 후 상세 보기 루프에 진입합니다. SupplierID를 입력하면 showSupplierDetail()을 호출하고, 빈 입력이면 메인 메뉴로 돌아갑니다.
-
-**`private static void showSupplierDetail(Connection conn, SupplierRepository repository, Scanner sc, int supplierId) throws Exception`**
-
-특정 공급업체의 최근 발주서를 페이징으로 보여주는 메서드입니다.
-
-한 페이지에 표시할 개수를 입력받습니다(기본 5개). 페이지 번호를 관리하며 SupplierRepository.recentPurchaseOrders()로 해당 페이지의 발주서를 조회합니다.
-
-'n'(다음), 'p'(이전), 'q'(종료) 키로 페이지를 이동합니다. 첫 페이지에서 'p'를 누르면 "이미 첫 페이지입니다" 메시지를, 더 이상 데이터가 없는 페이지에서 'n'을 누르면 "다음 페이지가 없습니다" 메시지를 출력합니다.
-
-**`private static String nvl(Object o)`**
-
-null이면 "-"를 반환하는 헬퍼 메서드입니다.
-
-**`private static String cut(String s, int max)`**
-
-문자열이 max보다 길면 잘라서 "…"를 붙이는 헬퍼 메서드입니다. 표 출력 시 긴 문자열이 레이아웃을 깨지 않도록 합니다.
+```
+예외 발생
+   ↓
+GlobalExceptionHandler.@ExceptionHandler()
+   ├─ Logger.error() → 로그 기록
+   ├─ 사용자 친화적 메시지 생성
+   └─ ResponseEntity 반환 (HTTP 상태 코드 포함)
+```
 
 ---
 
-### (변경 가능) 2.3.17 InputHelper (콘솔 입력 유틸)
+## 2.4 주요 설계 패턴 및 원칙
 
-**파일 위치:** `hw10/util/InputHelper.java`
+### 2.4.1 사용된 설계 패턴
 
-> ⚠️ **변경 가능**: 이 클래스는 콘솔 입력용입니다. 웹/GUI에서는 다른 입력 처리 방식을 사용합니다.
+1. **Repository 패턴**: 데이터 접근 로직을 캡슐화하여 비즈니스 로직과 분리했습니다.
+2. **DTO 패턴**: 계층 간 데이터 전송을 위한 전용 객체를 사용하여 도메인 모델을 보호했습니다.
+3. **의존성 주입 패턴**: Spring Framework를 통해 의존성을 외부에서 주입하여 테스트 용이성을 높였습니다.
+4. **불변 객체 패턴**: `record` 클래스를 사용하여 DTO의 불변성을 보장했습니다.
 
-InputHelper 클래스는 콘솔에서 사용자 입력을 안전하게 처리하는 유틸리티 함수들을 제공합니다.
+### 2.4.2 SOLID 원칙 준수
 
-#### 메서드 상세 설명
+1. **단일 책임 원칙 (SRP)**: 각 클래스는 하나의 책임만 가집니다.
+   - Controller: HTTP 요청/응답 처리
+   - Service: 비즈니스 로직 처리
+   - Repository: 데이터 접근 처리
 
-**`public static String readLine(Scanner sc, String prompt)`**
+2. **의존성 역전 원칙 (DIP)**: 고수준 모듈(Service)이 저수준 모듈(Repository)에 의존하지 않고 추상화에 의존합니다.
 
-프롬프트를 출력하고 한 줄을 입력받아 앞뒤 공백을 제거하여 반환하는 메서드입니다. System.out.print()로 프롬프트를 출력하고, sc.nextLine().trim()으로 입력을 받습니다.
-
-**`public static int readInt(Scanner sc, String prompt)`**
-
-정수를 필수로 입력받는 메서드입니다. 무한 루프 안에서 readLine()으로 입력을 받고 Integer.parseInt()로 변환을 시도합니다. NumberFormatException이 발생하면 안내 메시지를 출력하고 다시 입력을 받습니다.
-
-**`public static Integer readIntOptional(Scanner sc, String prompt)`**
-
-정수를 선택적으로 입력받는 메서드입니다. 빈 입력이면 null을 반환하고, 그렇지 않으면 정수로 변환합니다. 변환 실패 시 안내 메시지를 출력하고 다시 입력을 받습니다.
-
-**`public static Double readDoubleOptional(Scanner sc, String prompt)`**
-
-실수를 선택적으로 입력받는 메서드입니다. readIntOptional()과 동일한 로직이지만 Double.parseDouble()을 사용합니다.
-
-**`public static List<String> readCsvTokensUpper(Scanner sc, String prompt)`**
-
-콤마로 구분된 문자열을 입력받아 리스트로 반환하는 메서드입니다. 입력을 콤마로 분리하고, 각 토큰에 trim()과 toUpperCase()를 적용하여 리스트에 추가합니다. 빈 입력이면 빈 리스트를 반환합니다.
-
-**`public static boolean isAllDigits(String s)`**
-
-문자열이 숫자로만 구성되어 있는지 확인하는 메서드입니다. null이나 빈 문자열이면 false를 반환합니다. 각 문자에 대해 Character.isDigit()을 호출하여 숫자가 아닌 문자가 있으면 false를 반환합니다. ProjectID(숫자)인지 선박명(문자열)인지 판단하는 데 사용됩니다.
+3. **개방-폐쇄 원칙 (OCP)**: 확장에는 열려있고 수정에는 닫혀있도록 인터페이스를 활용할 수 있는 구조입니다.
 
 ---
 
-## 2.4 레이어별 역할 요약
+## 2.5 요구사항 구현 현황
 
-| 레이어 | 클래스들 | 역할 | 변경 가능 |
-|--------|---------|------|----------|
-| **Entry Point** | Application | 프로그램 시작/종료, 의존성 연결 | 고정 |
-| **Config** | DatabaseConfig | 환경설정 로드 | 고정 |
-| **DB** | DatabaseConnection | DB 연결 관리 | 고정 |
-| **DAO** | ProjectRepository, SupplierRepository, OrderRepository, DeliveryRepository, InventoryRepository, SequenceGenerator | SQL 실행 및 데이터 접근 | 고정 |
-| **Service** | OrderTransactionService | 비즈니스 로직, 트랜잭션 관리 | 고정 |
-| **UI** | ConsoleMenu, ProjectDashboard, OrderRegistration, SupplierReport | 사용자 인터페이스 | **(변경 가능)** |
-| **Util** | Logger, ErrorHandler, InputHelper | 공통 유틸리티 | InputHelper만 변경 가능 |
+### 2.5.1 [기능 1] 프로젝트 대시보드 및 탄소·비용 리포트
+
+✅ **구현 완료**
+- 프로젝트 기본 정보 조회 (`ProjectController.getProject()`)
+- 총 발주 금액 계산 (`ProjectRepository.totalOrderAmount()`)
+- 공급업체별 발주 금액 상위 3개 (`ProjectRepository.topSuppliersByAmount()`)
+- 운송/보관 관련 탄소 배출 합계 (`ProjectRepository.emissionSumByType()`)
+- 프로젝트 전체 탄소 배출 합계 (`ProjectRepository.emissionSumTotal()`)
+- 탄소 집약도 계산 (`ProjectRepository.calculateCarbonIntensity()`)
+
+### 2.5.2 [기능 2] 발주 및 납품 관리 + 트랜잭션 처리
+
+✅ **구현 완료**
+- 발주서 생성 (`OrderRepository.insertPurchaseOrder()`)
+- 발주 품목 등록 (`OrderRepository.insertPurchaseOrderLine()`)
+- 초기 납품 자동 생성 (`DeliveryRepository.insertDelivery()`)
+- 납품 품목 등록 (`DeliveryRepository.insertDeliveryLine()`)
+- 창고 재고 반영 (`InventoryRepository.addInventory()`)
+- 트랜잭션 처리 (`OrderTransactionService.createOrderWithInitialDelivery()`)
+- 롤백 처리 및 재시도 로직 구현
+
+### 2.5.3 [기능 3] 공급업체 ESG 및 지연 납품 리포트
+
+✅ **구현 완료**
+- 공급업체 목록 조회 (`SupplierRepository.listSuppliers()`)
+- ESG 등급 필터링 (다중 선택 지원)
+- 지연 납품 비율 필터링 (상한/하한 지원)
+- 공급업체 상세 정보 조회 (`SupplierService.getSupplierDetail()`)
+- 최근 N개 발주서 목록 조회 (`SupplierRepository.recentPurchaseOrders()`)
+
+### 2.5.4 [기능 4] 예외 처리·로그·환경 설정
+
+✅ **구현 완료**
+- 전역 예외 처리 (`GlobalExceptionHandler`)
+- 사용자 친화적 에러 메시지 제공
+- 로그 시스템 (`Logger` 클래스)
+  - 파일 로그 (`logs/app.log`)
+  - 콘솔 로그
+  - 애플리케이션 시작/종료 기록
+  - DB 접속 성공/실패 기록
+  - 트랜잭션 시작/커밋/롤백 기록
+  - 주요 오류 발생 시 메시지 기록
+- 환경 설정 분리 (`DatabaseConfig`)
+  - 환경변수 우선
+  - `application.properties` 지원
+  - 레거시 `config.properties` 지원
 
 ---
 
-## 2.5 과제 요구사항 매핑 요약
+## 2.6 결론
 
-| 요구사항 | 구현 클래스 | 핵심 구현 내용 |
-|----------|------------|---------------|
-| 기능 1: 프로젝트 대시보드 | ProjectRepository, ProjectDashboard | JOIN, SUM, GROUP BY, 탄소집약도 계산 |
-| 기능 2: 트랜잭션 처리 | OrderTransactionService, 각 DAO | setAutoCommit, commit, rollback, 교착상태 재시도 |
-| 기능 3: 공급업체 리포트 | SupplierRepository, SupplierReport | WITH CTE, 동적 필터, 페이징 |
-| 기능 4: 예외처리/로그/환경설정 | Logger, ErrorHandler, DatabaseConfig | 파일/콘솔 로그, SQLSTATE 변환, config.properties |
+본 애플리케이션은 **계층형 아키텍처**를 기반으로 하여 각 계층의 책임을 명확히 분리하고, **Spring Framework**의 의존성 주입을 활용하여 유연하고 테스트 가능한 구조를 구현했습니다.
 
+**트랜잭션 처리**에서는 [기능 2] 요구사항을 충실히 구현하여 발주서 생성부터 재고 반영까지의 모든 과정을 하나의 트랜잭션으로 묶고, 교착상태 발생 시 자동 재시도 로직을 포함하여 동시성 문제를 해결했습니다.
 
+**예외 처리 및 로깅**에서는 [기능 4] 요구사항에 따라 사용자에게 이해 가능한 메시지를 제공하면서도 개발자를 위한 상세한 로그를 기록하여 디버깅을 용이하게 했습니다.
 
-
-
-
-
-
-
-## 2.6 변경 내역
-
-### v1.0.0 - 최초 생성
-
-- 클래스 다이어그램 및 패키지 구조 작성
-- 기본 클래스 설명 추가
-
-### v1.0.1 - 메서드 상세 설명 추가
-
-✅ **전체 17개 클래스의 모든 메서드 상세 설명 추가**
-
-| 클래스 | 설명된 메서드 | 변경 가능 |
-|--------|--------------|----------|
-| Application | `main()` | 고정 |
-| DatabaseConfig | 생성자, `load()`, `notBlank()` | 고정 |
-| DatabaseConnection | 생성자, `openConnection()`, `close()` | 고정 |
-| Logger | `init()`, `info()`, `warn()`, `error()` | 고정 |
-| ErrorHandler | `toUserMessage()` | 고정 |
-| ProjectRepository | `findProjectById()`, `searchProjectsByShipName()`, `totalOrderAmount()`, `topSuppliersByAmount()`, `emissionSumByType()`, `emissionSumTotal()` | 고정 |
-| SupplierRepository | `listSuppliers()`, `recentPurchaseOrders()` | 고정 |
-| OrderRepository | `insertPurchaseOrder()`, `insertPurchaseOrderLine()` | 고정 |
-| DeliveryRepository | `insertDelivery()`, `insertDeliveryLine()` | 고정 |
-| InventoryRepository | `addInventory()` | 고정 |
-| SequenceGenerator | `nextId()` | 고정 |
-| OrderTransactionService | `createOrderWithInitialDelivery()` | 고정 |
-| ConsoleMenu | 생성자, `run()` | **(변경 가능)** ⚠️ |
-| ProjectDashboard | `run()`, `nvl()` | **(변경 가능)** ⚠️ |
-| OrderRegistration | `run()` | **(변경 가능)** ⚠️ |
-| SupplierReport | `run()`, `showSupplierDetail()`, `nvl()`, `cut()` | **(변경 가능)** ⚠️ |
-| InputHelper | `readLine()`, `readInt()`, `readIntOptional()`, `readDoubleOptional()`, `readCsvTokensUpper()`, `isAllDigits()` | **(변경 가능)** ⚠️ |
-
-✅ **각 메서드별 포함 내용**
-
-| 항목 | 설명 |
-|------|------|
-| 파라미터/반환값 | 각 메서드의 입력과 출력 설명 |
-| 알고리즘/동작 흐름 | 줄글로 상세 설명 |
-| SQL 쿼리 설명 | DAO 클래스의 쿼리 동작 방식 |
-| 트랜잭션 처리 | Service 클래스의 트랜잭션 관리 |
-| 요구사항 매핑 | 과제 요구사항 충족 여부 |
+모든 클래스와 메서드는 **명확한 주석과 문서화**를 통해 코드의 가독성과 유지보수성을 높였으며, **Java의 최신 기능(record, try-with-resources 등)**을 적극 활용하여 간결하고 안전한 코드를 작성했습니다.
