@@ -1,0 +1,17 @@
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\Application.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\config\DatabaseConfig.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\dao\DeliveryRepository.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\dao\InventoryRepository.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\dao\OrderRepository.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\dao\ProjectRepository.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\dao\SequenceGenerator.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\dao\SupplierRepository.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\db\DatabaseConnection.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\service\OrderTransactionService.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\ui\ConsoleMenu.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\ui\OrderRegistration.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\ui\ProjectDashboard.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\ui\SupplierReport.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\util\ErrorHandler.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\util\InputHelper.java
+C:\Users\pjjpj\source\repos\RedBull-Monster-HOT6\Net_Zero_Smart_SCM\Console_code\src\main\java\hw10\util\Logger.java
