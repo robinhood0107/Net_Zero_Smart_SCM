@@ -53,15 +53,22 @@ PostgreSQL을 설치한 후, 아래 명령어를 순서대로 실행하여 데�
 
 DB 접속 정보를 본인의 환경에 맞게 수정해야 합니다.
 
-1.  `src/main/resources/application.properties` 파일을 엽니다.
-2.  아래 내용을 본인의 PostgreSQL 계정 정보로 변경하세요.
+1.  예시 설정 파일을 복사하여 실제 설정 파일을 만듭니다.
+
+    ```bash
+    # Windows
+    copy src\main\resources\application.example.properties src\main\resources\application.properties
+    ```
+
+2.  생성된 `src/main/resources/application.properties`에서 PostgreSQL 계정 정보를 본인 환경으로 수정하세요.
 
 ```properties
-# ⚠️ 사용자명과 비밀번호를 본인 설정에 맞게 변경하세요!
 spring.datasource.url=jdbc:postgresql://localhost:5432/scm_db
-spring.datasource.username=postgres  <-- 여기 변경 (예: parkjongjin)
-spring.datasource.password=1234      <-- 여기 변경 (예: park1234!)
+spring.datasource.username=<본인 사용자>   # 예: postgres
+spring.datasource.password=<본인 비밀번호> # 예: myStrongPwd!
 ```
+
+> ⚠️ `application.properties`는 `.gitignore`에 포함되어 있어 저장소에 올라가지 않습니다. 비밀번호를 직접 채워 넣으세요.
 
 ---
 

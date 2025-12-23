@@ -25,17 +25,29 @@ CREATE DATABASE scm_db OWNER parkjongjin;
 
 ### 2단계: 스키마 및 샘플 데이터 적용
 
+`schema.sql`과 `seed.sql`을 PostgreSQL에 적용합니다.
+
+```bash
+# Windows (psql)
+psql -U <사용자명> -d scm_db -f schema.sql
+psql -U <사용자명> -d scm_db -f seed.sql
+```
+
 ### 3단계: DB 접속 설정
 
-프로젝트 루트에 `config.properties` 파일 생성:
+1. 제공된 예시 파일(`config.example.properties`)을 복사해 `config.properties`를 만듭니다.
+2. 본인의 DB 계정 정보로 값을 수정합니다.
+
+```bash
+copy config.example.properties config.properties
+```
 
 ```properties
 db.url=jdbc:postgresql://localhost:5432/scm_db
-db.user=내 이름
-db.password=내 비밀번호
+db.user=<본인 사용자>
+db.password=<본인 비밀번호>
 ```
 
-> ⚠️ 본인의 DB 비밀번호로 수정하세요!
 
 ### 4단계: 빌드 및 실행
 

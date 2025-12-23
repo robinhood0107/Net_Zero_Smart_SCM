@@ -489,6 +489,43 @@ release.properties
 config.properties
 *.properties
 !pom.xml
+# 프로젝트별 민감 설정 파일은 버전 관리 제외
+/Console_code/config.properties
+/Web_code/src/main/resources/application.properties
+# 예시 설정 파일은 버전 관리 허용
+!/Console_code/config.example.properties
+!/Web_code/src/main/resources/application.example.properties
+
+# ===== 모듈별 추가 무시 규칙 =====
+# Console_code
+/Console_code/logs/
+/Console_code/target/
+/Console_code/*.log
+/Console_code/*.log.*
+/Console_code/*.lck
+
+# Web_code (프런트+백엔드)
+/Web_code/node_modules/
+/Web_code/node/
+/Web_code/package-lock.json
+/Web_code/npm-debug.log*
+/Web_code/yarn-debug.log*
+/Web_code/yarn-error.log*
+/Web_code/src/main/resources/static/css/tailwind.css
+/Web_code/src/main/resources/application-local.properties
+/Web_code/src/main/resources/application-*.yml
+!/Web_code/src/main/resources/application.yml
+!/Web_code/src/main/resources/application.example.properties
+/Web_code/logs/
+/Web_code/target/
+/Web_code/*.log
+/Web_code/*.log.*
+/Web_code/*.lck
+/Web_code/.idea/
+/Web_code/.vscode/
+/Web_code/.settings/
+/Web_code/.classpath
+/Web_code/.project
 
 # ===== 개인 메모/설정 =====
 DB 초기 설정.txt
