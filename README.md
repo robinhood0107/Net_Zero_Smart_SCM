@@ -1,5 +1,15 @@
 # Net_Zero_Smart_SCM
 
+## 포트폴리오 요약
+
+| 항목 | 내용 |
+| --- | --- |
+| 기간 | 2025. 12 ~ 2025. 12 (1개월) |
+| 구분 | 개인 데이터베이스 설계·구축 과제 |
+| 결과 | 발주서·발주항목·납품·재고 반영을 하나의 트랜잭션으로 묶어 중간 실패 시 전체 롤백되도록 구성 |
+| 개인 역할 | 공급망 도메인·스키마 설계, CHECK/FK·UPSERT, SQLSTATE 기반 오류 처리와 deadlock 재시도 구현 |
+| 기술 | Java 17, Spring Boot, JDBC, PostgreSQL, HikariCP, Maven |
+
 이 저장소는 두 개의 애플리케이션을 포함합니다.
 - `Console_code`: 콘솔 기반 SCM/탄소배출 관리 도구 (Java 17, Maven)
 - `Web_code`: Spring Boot 웹 애플리케이션 + 정적 프런트엔드
@@ -48,4 +58,3 @@ mvn spring-boot:run
 - 발주 관리: http://localhost:8080/order.html
 - 공급업체 리포트: http://localhost:8080/supplier.html
 - 설정: http://localhost:8080/setting.html
-
