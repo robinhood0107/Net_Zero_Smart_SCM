@@ -148,24 +148,14 @@ async function handleSearch() {
         searchInput.value = keyword;
     }
     
-    // 특수 문자 제거 및 입력 값 정제
-    const sanitizedKeyword = keyword.replace(/[<>\"']/g, '');
-    
     try {
-        const projectId = parseInt(sanitizedKeyword, 10);
-        if (!isNaN(projectId) && projectId > 0 && projectId <= 2147483647) {
+        const projectId = Number(keyword);
+        if (/^\d+$/.test(keyword) && projectId > 0 && projectId <= 2147483647) {
             // 프로젝트 ID 숫자 범위 검증
             currentProjectId = projectId;
             await loadDashboard(projectId);
         } else {
-            // 선박명 검색 (허용 문자: 알파벳, 한글, 숫자, 공백)
-            const validKeyword = sanitizedKeyword.replace(/[^a-zA-Z0-9가-힣\s]/g, '');
-            if (!validKeyword || validKeyword.length === 0) {
-                alert('유효하지 않은 검색어입니다.');
-                return;
-            }
-            
-            const results = await searchProjects(validKeyword, 10);
+            const results = await searchProjects(keyword, 10);
             if (results.length === 0) {
                 alert('검색 결과가 없습니다.');
                 return;
