@@ -42,6 +42,7 @@ public class OrderService {
                             p.projectId(),
                             p.shipName(),
                             p.shipType(),
+                            p.contractDate(),
                             p.status()))
                     .toList();
         }

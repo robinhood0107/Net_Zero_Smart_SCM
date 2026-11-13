@@ -36,6 +36,7 @@ public class ProjectDto {
                         int projectId,
                         String shipName,
                         String shipType,
+                        Date contractDate,
                         String status) {
         }
 
