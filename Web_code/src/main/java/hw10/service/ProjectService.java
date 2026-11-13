@@ -56,6 +56,7 @@ public class ProjectService {
                             r.projectId(),
                             r.shipName(),
                             r.shipType(),
+                            r.contractDate(),
                             r.status()))
                     .toList();
         }

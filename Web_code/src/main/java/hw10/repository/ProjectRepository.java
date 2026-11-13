@@ -27,7 +27,7 @@ public final class ProjectRepository {
     }
 
     // 프로젝트 검색용 요약 레코드.
-    public record ProjectSearchItem(int projectId, String shipName, String shipType, String status) {
+    public record ProjectSearchItem(int projectId, String shipName, String shipType, java.sql.Date contractDate, String status) {
     }
 
     /**
@@ -66,7 +66,7 @@ public final class ProjectRepository {
     public List<ProjectSearchItem> searchProjectsByShipName(Connection conn, String keyword, int limit, int offset)
             throws SQLException {
         String sql = """
-                SELECT ProjectID, ShipName, ShipType, Status
+                SELECT ProjectID, ShipName, ShipType, ContractDate, Status
                 FROM ShipProject
                 WHERE ShipName ILIKE ?
                 ORDER BY ProjectID
@@ -85,6 +85,7 @@ public final class ProjectRepository {
                             rs.getInt("ProjectID"),
                             rs.getString("ShipName"),
                             rs.getString("ShipType"),
+                            rs.getDate("ContractDate"),
                             rs.getString("Status")));
                 }
                 return out;
